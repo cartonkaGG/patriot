@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вхід... — Patriot</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #FAFAF9; }
+    .loader { text-align: center; color: #57534E; }
+  </style>
+</head>
+<body>
+  <div class="loader">
+    <p>Завершуємо вхід...</p>
+    <p id="error" class="text-red-600 mt-2 hidden"></p>
+    <a id="back" href="account.html" class="hidden text-amber-700 underline mt-4 inline-block">Повернутися</a>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/data.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect') || 'cabinet.html';
+
+      try {
+        const client = getSupabase();
+        if (!client) throw new Error('Supabase не налаштовано');
+
+        const { data, error } = await client.auth.getSession();
+        if (error) throw error;
+
+        if (data.session?.user) {
+          const user = data.session.user;
+          const meta = user.user_metadata || {};
+          await client.from('profiles').upsert({
+            id: user.id,
+            full_name: meta.full_name || meta.name || meta.full_name || '',
+            phone: meta.phone || '',
+            email: user.email || null,
+            updated_at: new Date().toISOString()
+          });
+          window.location.href = redirect;
+          return;
+        }
+
+        await new Promise(r => setTimeout(r, 1500));
+        const retry = await client.auth.getSession();
+        if (retry.data.session) {
+          window.location.href = redirect;
+        } else {
+          throw new Error('Не вдалося завершити вхід');
+        }
+      } catch (err) {
+        document.getElementById('error').textContent = err.message;
+        document.getElementById('error').classList.remove('hidden');
+        document.getElementById('back').classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

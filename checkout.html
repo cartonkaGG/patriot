@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Оформлення замовлення — Patriot Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            patriot: {
+              primary: '#1C1917',
+              secondary: '#44403C',
+              accent: '#CA8A04',
+              bg: '#FAFAF9',
+              text: '#0C0A09',
+              muted: '#57534E',
+              surface: '#F5F5F4',
+            }
+          },
+          fontFamily: {
+            heading: ['Cormorant', 'serif'],
+            body: ['Montserrat', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="font-body bg-patriot-bg text-patriot-text antialiased">
+
+  <header class="fixed top-4 left-4 right-4 z-50">
+    <nav class="glass-nav max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between rounded-2xl">
+      <a href="index.html" class="flex items-center gap-3 cursor-pointer">
+        <div class="w-10 h-10 rounded-lg bg-patriot-primary flex items-center justify-center border border-patriot-accent/30">
+          <svg class="w-6 h-6 text-patriot-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3L4 9v12h16V9l-8-6z"/>
+          </svg>
+        </div>
+        <span class="font-heading text-2xl font-bold tracking-wider text-patriot-primary">PATRIOT</span>
+      </a>
+      <a href="index.html#catalog" class="nav-link cursor-pointer">← Повернутися до магазину</a>
+    </nav>
+  </header>
+
+  <main class="pt-28 pb-16 px-4 sm:px-6">
+    <div class="max-w-6xl mx-auto">
+      <h1 class="font-heading text-4xl font-bold mb-2">Оформлення замовлення</h1>
+      <p class="text-patriot-muted mb-10">Заповніть дані для доставки та оплати</p>
+
+      <!-- Empty cart -->
+      <div id="checkout-empty" class="hidden text-center py-20 glass-card">
+        <p class="text-patriot-muted mb-6">Ваш кошик порожній</p>
+        <a href="index.html#catalog" class="btn-primary inline-block cursor-pointer">Перейти до каталогу</a>
+      </div>
+
+      <!-- Success -->
+      <div id="checkout-success" class="hidden text-center py-16 glass-card max-w-lg mx-auto">
+        <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h2 class="font-heading text-3xl font-bold mb-2">Замовлення прийнято!</h2>
+        <p class="text-patriot-muted mb-2">Номер замовлення: <span id="order-number" class="font-semibold text-patriot-text"></span></p>
+        <div id="order-summary-text" class="text-sm text-patriot-muted mb-8"></div>
+        <a href="index.html" class="btn-primary inline-block cursor-pointer">На головну</a>
+      </div>
+
+      <!-- Form -->
+      <div id="checkout-form-wrap">
+        <div class="grid lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 space-y-6">
+            <form id="checkout-form" class="space-y-6">
+
+              <!-- Contact -->
+              <section class="checkout-section glass-card p-6">
+                <h2 class="font-heading text-xl font-semibold mb-4">Контактні дані</h2>
+                <div class="grid sm:grid-cols-2 gap-4">
+                  <div class="sm:col-span-2">
+                    <label for="customer-name" class="admin-label">ПІБ *</label>
+                    <input type="text" id="customer-name" required class="admin-input" placeholder="Іван Петренко">
+                  </div>
+                  <div>
+                    <label for="customer-phone" class="admin-label">Телефон *</label>
+                    <input type="tel" id="customer-phone" required class="admin-input" placeholder="+380 99 757 72 14" pattern="[+0-9\s\-()]{10,17}">
+                  </div>
+                  <div>
+                    <label for="customer-email" class="admin-label">Email</label>
+                    <input type="email" id="customer-email" class="admin-input" placeholder="email@example.com">
+                  </div>
+                </div>
+              </section>
+
+              <!-- Delivery -->
+              <section class="checkout-section glass-card p-6">
+                <h2 class="font-heading text-xl font-semibold mb-4">Спосіб доставки</h2>
+                <div class="space-y-3 mb-6">
+                  <label class="delivery-option cursor-pointer">
+                    <input type="radio" name="delivery" value="nova_poshta" checked>
+                    <span class="delivery-option-content">
+                      <span class="font-medium">Нова Пошта</span>
+                      <span class="text-patriot-muted text-xs">Доставка у відділення</span>
+                    </span>
+                  </label>
+                  <label class="delivery-option cursor-pointer">
+                    <input type="radio" name="delivery" value="pickup">
+                    <span class="delivery-option-content">
+                      <span class="font-medium">Самовивіз з магазину</span>
+                      <span class="text-patriot-muted text-xs">м. Луцьк, проспект Волі, 1, ЦУМ 5 поверх</span>
+                    </span>
+                  </label>
+                </div>
+
+                <!-- Nova Poshta -->
+                <div id="delivery-np" class="delivery-fields space-y-4">
+                  <p id="np-api-hint" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    Для вибору відділень додайте API-ключ Нової Пошти в <a href="admin.html" class="underline cursor-pointer">адмін-панелі</a> → Налаштування.
+                  </p>
+                  <div id="np-city-wrap" class="relative">
+                    <label for="np-city" class="admin-label">Місто *</label>
+                    <input type="text" id="np-city" class="admin-input" placeholder="Почніть вводити назву міста" autocomplete="off">
+                    <div id="np-city-list" class="autocomplete-list hidden"></div>
+                  </div>
+                  <div>
+                    <label for="np-warehouse" class="admin-label">Відділення *</label>
+                    <select id="np-warehouse" class="admin-input" disabled>
+                      <option value="">Спочатку оберіть місто</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Pickup -->
+                <div id="delivery-pickup" class="delivery-fields hidden">
+                  <div class="pickup-info">
+                    <svg class="w-5 h-5 text-patriot-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <div>
+                      <p class="font-medium">Адреса магазину</p>
+                      <p class="text-patriot-muted text-sm mt-1">м. Луцьк, проспект Волі, 1, ЦУМ 5 поверх</p>
+                      <p class="text-patriot-muted text-sm mt-2">Тел: <a href="tel:+380997577214" class="text-patriot-accent">+380 99 757 72 14</a></p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Payment -->
+              <section class="checkout-section glass-card p-6">
+                <h2 class="font-heading text-xl font-semibold mb-4">Спосіб оплати</h2>
+                <div class="space-y-3">
+                  <label class="delivery-option cursor-pointer">
+                    <input type="radio" name="payment" value="online">
+                    <span class="delivery-option-content">
+                      <span class="font-medium">Оплатити зараз</span>
+                      <span class="text-patriot-muted text-xs">Менеджер зв'яжеться для оплати карткою</span>
+                    </span>
+                  </label>
+                  <label class="delivery-option cursor-pointer">
+                    <input type="radio" name="payment" value="on_delivery" checked>
+                    <span class="delivery-option-content">
+                      <span class="font-medium">Оплата при отриманні</span>
+                      <span class="text-patriot-muted text-xs">Накладений платіж або оплата у відділенні</span>
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              <!-- Comment -->
+              <section class="checkout-section glass-card p-6">
+                <label for="order-comment" class="admin-label">Коментар до замовлення</label>
+                <textarea id="order-comment" rows="3" class="admin-input" placeholder="Додаткові побажання (необов'язково)"></textarea>
+              </section>
+
+              <button type="submit" class="btn-primary w-full cursor-pointer text-lg py-4">Підтвердити замовлення</button>
+            </form>
+          </div>
+
+          <!-- Summary -->
+          <div class="lg:col-span-1">
+            <div class="glass-card p-6 sticky top-28">
+              <h2 class="font-heading text-xl font-semibold mb-4">Ваше замовлення</h2>
+              <div id="checkout-items" class="space-y-3 mb-6 max-h-80 overflow-y-auto"></div>
+              <div class="border-t border-stone-200 pt-4 flex justify-between items-center">
+                <span class="text-patriot-muted">Разом:</span>
+                <span id="checkout-total" class="font-heading text-2xl font-bold text-patriot-accent">0 ₴</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-6 py-3 rounded-xl bg-patriot-primary text-white text-sm font-medium shadow-2xl translate-y-20 opacity-0 transition-all duration-300 pointer-events-none" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/data.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/cart.js"></script>
+  <script src="js/delivery.js"></script>
+  <script src="js/checkout.js"></script>
+</body>
+</html>
