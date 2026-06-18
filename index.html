@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Patriot — преміальний інтернет-магазин пневматичної зброї, статуеток, запальничок Zippo та засобів самооборони.">
+  <title>Patriot — Магазин зброї та тактичних аксесуарів</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            patriot: {
+              primary: '#1C1917',
+              secondary: '#44403C',
+              accent: '#CA8A04',
+              'accent-light': '#EAB308',
+              bg: '#FAFAF9',
+              text: '#0C0A09',
+              muted: '#57534E',
+              surface: '#F5F5F4',
+            }
+          },
+          fontFamily: {
+            heading: ['Cormorant', 'serif'],
+            body: ['Montserrat', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="font-body bg-patriot-bg text-patriot-text antialiased overflow-x-hidden">
+
+  <!-- Age Verification -->
+  <div id="age-gate" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-patriot-primary/95 backdrop-blur-md" role="dialog" aria-labelledby="age-title" aria-modal="true">
+    <div class="glass-card-dark max-w-md w-full p-8 text-center">
+      <div class="w-16 h-16 mx-auto mb-6 rounded-full border-2 border-patriot-accent flex items-center justify-center">
+        <span class="font-heading text-2xl font-bold text-patriot-accent">18+</span>
+      </div>
+      <h2 id="age-title" class="font-heading text-3xl font-semibold text-white mb-3">Підтвердження віку</h2>
+      <p class="text-stone-400 text-sm leading-relaxed mb-8">Цей сайт містить інформацію про пневматичну зброю та засоби самооборони. Підтвердіть, що вам виповнилося 18 років.</p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button id="age-confirm" class="btn-primary flex-1 cursor-pointer">Мені є 18 років</button>
+        <button id="age-deny" class="btn-ghost flex-1 cursor-pointer">Вийти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <header class="fixed top-4 left-4 right-4 z-50">
+    <nav class="glass-nav max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between rounded-2xl" aria-label="Головна навігація">
+      <a href="#" class="flex items-center gap-3 group cursor-pointer">
+        <div class="w-10 h-10 rounded-lg bg-patriot-primary flex items-center justify-center border border-patriot-accent/30 group-hover:border-patriot-accent transition-colors duration-200">
+          <svg class="w-6 h-6 text-patriot-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3L4 9v12h16V9l-8-6z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 21V12h6v9"/>
+          </svg>
+        </div>
+        <div>
+          <span class="font-heading text-2xl font-bold tracking-wider text-patriot-primary">PATRIOT</span>
+          <span class="hidden sm:block text-[10px] uppercase tracking-[0.3em] text-patriot-muted">Tactical Store</span>
+        </div>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-8">
+        <a href="#catalog" class="nav-link cursor-pointer">Каталог</a>
+        <a href="#categories" class="nav-link cursor-pointer">Категорії</a>
+        <a href="#about" class="nav-link cursor-pointer">Про нас</a>
+        <a href="#contact" class="nav-link cursor-pointer">Контакти</a>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="search-btn" class="icon-btn cursor-pointer" aria-label="Пошук">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </button>
+        <button id="cart-btn" class="icon-btn relative cursor-pointer" aria-label="Кошик">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <span id="cart-count" class="absolute -top-1 -right-1 w-5 h-5 bg-patriot-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+        </button>
+        <button id="menu-btn" class="icon-btn lg:hidden cursor-pointer" aria-label="Меню" aria-expanded="false">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden lg:hidden glass-nav max-w-7xl mx-auto mt-2 px-6 py-4 rounded-2xl">
+      <div class="flex flex-col gap-4">
+        <a href="#catalog" class="nav-link cursor-pointer">Каталог</a>
+        <a href="#categories" class="nav-link cursor-pointer">Категорії</a>
+        <a href="#about" class="nav-link cursor-pointer">Про нас</a>
+        <a href="#contact" class="nav-link cursor-pointer">Контакти</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Overlay -->
+  <div id="search-overlay" class="fixed inset-0 z-[60] bg-patriot-primary/80 backdrop-blur-sm hidden items-start justify-center pt-32 px-4">
+    <div class="w-full max-w-2xl">
+      <div class="glass-card p-4 flex items-center gap-3">
+        <svg class="w-5 h-5 text-patriot-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="search" id="search-input" placeholder="Пошук товарів..." class="flex-1 bg-transparent outline-none text-patriot-text placeholder:text-patriot-muted" aria-label="Пошук товарів">
+        <button id="search-close" class="text-patriot-muted hover:text-patriot-text transition-colors cursor-pointer" aria-label="Закрити пошук">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="search-results" class="mt-4 space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Cart Sidebar -->
+  <div id="cart-overlay" class="fixed inset-0 z-[60] bg-patriot-primary/50 backdrop-blur-sm hidden" aria-hidden="true"></div>
+  <aside id="cart-sidebar" class="fixed top-0 right-0 z-[70] h-full w-full max-w-md bg-white shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col" aria-label="Кошик">
+    <div class="p-6 border-b border-stone-200 flex items-center justify-between">
+      <h2 class="font-heading text-2xl font-semibold">Кошик</h2>
+      <button id="cart-close" class="icon-btn cursor-pointer" aria-label="Закрити кошик">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+    <div class="p-6 border-t border-stone-200 bg-patriot-surface">
+      <div class="flex justify-between mb-4">
+        <span class="text-patriot-muted">Разом:</span>
+        <span id="cart-total" class="font-semibold text-xl">0 ₴</span>
+      </div>
+      <button class="btn-primary w-full cursor-pointer">Оформити замовлення</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- Hero -->
+    <section class="relative min-h-screen flex items-center pt-28 pb-16 overflow-hidden">
+      <div class="hero-bg absolute inset-0"></div>
+      <div class="hero-pattern absolute inset-0 opacity-30"></div>
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 w-full">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="animate-fade-up">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-patriot-accent/10 border border-patriot-accent/20 mb-6">
+              <span class="w-2 h-2 rounded-full bg-patriot-accent animate-pulse"></span>
+              <span class="text-xs uppercase tracking-widest text-patriot-accent font-medium">Офіційний дилер</span>
+            </div>
+            <h1 class="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6">
+              Сила.<br>
+              <span class="text-patriot-accent">Традиція.</span><br>
+              Patriot.
+            </h1>
+            <p class="text-stone-400 text-lg max-w-lg mb-8 leading-relaxed">
+              Преміальна пневматика, колекційні статуетки, легендарні Zippo та засоби самооборони. Якість, якій довіряють.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <a href="#catalog" class="btn-primary cursor-pointer text-center">Переглянути каталог</a>
+              <a href="#categories" class="btn-outline-light cursor-pointer text-center">Категорії</a>
+            </div>
+            <div class="flex items-center gap-8 mt-12 pt-8 border-t border-white/10">
+              <div>
+                <div class="font-heading text-3xl font-bold text-white">500+</div>
+                <div class="text-xs text-stone-500 uppercase tracking-wider">Товарів</div>
+              </div>
+              <div class="w-px h-10 bg-white/10"></div>
+              <div>
+                <div class="font-heading text-3xl font-bold text-white">12+</div>
+                <div class="text-xs text-stone-500 uppercase tracking-wider">Років досвіду</div>
+              </div>
+              <div class="w-px h-10 bg-white/10"></div>
+              <div>
+                <div class="font-heading text-3xl font-bold text-white">4.9</div>
+                <div class="text-xs text-stone-500 uppercase tracking-wider">Рейтинг</div>
+              </div>
+            </div>
+          </div>
+          <div class="relative hidden lg:block animate-fade-up delay-200">
+            <div class="hero-card-stack">
+              <div class="hero-feature-card hero-card-1 glass-card-dark p-6">
+                <svg class="w-8 h-8 text-patriot-accent mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <h3 class="font-heading text-xl text-white mb-1">Пневматика</h3>
+                <p class="text-stone-500 text-sm">Пістолети та гвинтівки провідних брендів</p>
+              </div>
+              <div class="hero-feature-card hero-card-2 glass-card-dark p-6">
+                <svg class="w-8 h-8 text-patriot-accent mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+                <h3 class="font-heading text-xl text-white mb-1">Zippo</h3>
+                <p class="text-stone-500 text-sm">Оригінальні запальнички та аксесуари</p>
+              </div>
+              <div class="hero-feature-card hero-card-3 glass-card-dark p-6">
+                <svg class="w-8 h-8 text-patriot-accent mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <h3 class="font-heading text-xl text-white mb-1">Самооборона</h3>
+                <p class="text-stone-500 text-sm">Перцеві балончики та тактичні засоби</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce-slow">
+        <a href="#categories" class="text-stone-500 hover:text-patriot-accent transition-colors cursor-pointer" aria-label="Прокрутити вниз">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- Categories Bento Grid -->
+    <section id="categories" class="py-24 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+          <span class="text-xs uppercase tracking-[0.3em] text-patriot-accent font-medium">Асортимент</span>
+          <h2 class="font-heading text-4xl sm:text-5xl font-bold mt-3">Категорії товарів</h2>
+          <p class="text-patriot-muted mt-4 max-w-2xl mx-auto">Оберіть категорію та знайдіть ідеальний товар для колекції чи практичного використання</p>
+        </div>
+        <div class="bento-grid">
+          <a href="#catalog" data-filter="pneumatic" class="bento-item bento-large category-card cursor-pointer group">
+            <div class="category-bg category-pneumatic"></div>
+            <div class="category-content">
+              <svg class="w-10 h-10 text-patriot-accent mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <h3 class="font-heading text-3xl font-semibold text-white mb-2">Пневматика</h3>
+              <p class="text-stone-400 text-sm max-w-xs">Пістолети, гвинтівки, CO₂ та пружинні моделі від Glock, Beretta, Kalashnikov</p>
+              <span class="inline-flex items-center gap-2 mt-4 text-patriot-accent text-sm font-medium group-hover:gap-3 transition-all duration-200">
+                Переглянути
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+              </span>
+            </div>
+          </a>
+          <a href="#catalog" data-filter="statues" class="bento-item category-card cursor-pointer group">
+            <div class="category-bg category-statues"></div>
+            <div class="category-content">
+              <h3 class="font-heading text-2xl font-semibold text-white mb-2">Статуетки</h3>
+              <p class="text-stone-400 text-sm">Військова та історична тематика</p>
+            </div>
+          </a>
+          <a href="#catalog" data-filter="zippo" class="bento-item category-card cursor-pointer group">
+            <div class="category-bg category-zippo"></div>
+            <div class="category-content">
+              <h3 class="font-heading text-2xl font-semibold text-white mb-2">Zippo</h3>
+              <p class="text-stone-400 text-sm">Оригінальні запальнички та пальне</p>
+            </div>
+          </a>
+          <a href="#catalog" data-filter="defense" class="bento-item category-card cursor-pointer group">
+            <div class="category-bg category-defense"></div>
+            <div class="category-content">
+              <h3 class="font-heading text-2xl font-semibold text-white mb-2">Самооборона</h3>
+              <p class="text-stone-400 text-sm">Перцовки, брелоки, газові балончики</p>
+            </div>
+          </a>
+          <a href="#catalog" data-filter="accessories" class="bento-item bento-wide category-card cursor-pointer group">
+            <div class="category-bg category-accessories"></div>
+            <div class="category-content">
+              <h3 class="font-heading text-2xl font-semibold text-white mb-2">Аксесуари</h3>
+              <p class="text-stone-400 text-sm">Ножі, фонарики, тактичні рукавички, чохли та інше спорядження</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Horizontal Scroll Showcase -->
+    <section class="py-16 bg-patriot-primary overflow-hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-10">
+        <span class="text-xs uppercase tracking-[0.3em] text-patriot-accent font-medium">Колекція</span>
+        <h2 class="font-heading text-4xl font-bold text-white mt-3">Популярні позиції</h2>
+      </div>
+      <div class="horizontal-scroll-container">
+        <div id="showcase-track" class="horizontal-scroll-track"></div>
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 mt-8 flex justify-center">
+        <div class="scroll-progress-bar">
+          <div id="scroll-progress" class="scroll-progress-fill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Catalog -->
+    <section id="catalog" class="py-24 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+          <div>
+            <span class="text-xs uppercase tracking-[0.3em] text-patriot-accent font-medium">Магазин</span>
+            <h2 class="font-heading text-4xl sm:text-5xl font-bold mt-3">Каталог товарів</h2>
+          </div>
+          <div class="flex flex-wrap gap-2" id="filter-buttons" role="tablist" aria-label="Фільтр категорій">
+            <button class="filter-btn active cursor-pointer" data-filter="all" role="tab" aria-selected="true">Усі</button>
+            <button class="filter-btn cursor-pointer" data-filter="pneumatic" role="tab" aria-selected="false">Пневматика</button>
+            <button class="filter-btn cursor-pointer" data-filter="statues" role="tab" aria-selected="false">Статуетки</button>
+            <button class="filter-btn cursor-pointer" data-filter="zippo" role="tab" aria-selected="false">Zippo</button>
+            <button class="filter-btn cursor-pointer" data-filter="defense" role="tab" aria-selected="false">Самооборона</button>
+            <button class="filter-btn cursor-pointer" data-filter="accessories" role="tab" aria-selected="false">Аксесуари</button>
+          </div>
+        </div>
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+      </div>
+    </section>
+
+    <!-- Trust / Features -->
+    <section class="py-24 px-4 sm:px-6 bg-patriot-surface">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="feature-card glass-card p-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-xl bg-patriot-accent/10 flex items-center justify-center">
+              <svg class="w-7 h-7 text-patriot-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <h3 class="font-heading text-xl font-semibold mb-2">Гарантія якості</h3>
+            <p class="text-patriot-muted text-sm">Офіційна гарантія на всю продукцію від виробника</p>
+          </div>
+          <div class="feature-card glass-card p-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-xl bg-patriot-accent/10 flex items-center justify-center">
+              <svg class="w-7 h-7 text-patriot-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            </div>
+            <h3 class="font-heading text-xl font-semibold mb-2">Швидка доставка</h3>
+            <p class="text-patriot-muted text-sm">Нова Пошта по всій Україні за 1–3 дні</p>
+          </div>
+          <div class="feature-card glass-card p-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-xl bg-patriot-accent/10 flex items-center justify-center">
+              <svg class="w-7 h-7 text-patriot-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            </div>
+            <h3 class="font-heading text-xl font-semibold mb-2">Безпечна оплата</h3>
+            <p class="text-patriot-muted text-sm">Оплата при отриманні або онлайн через LiqPay</p>
+          </div>
+          <div class="feature-card glass-card p-8 text-center">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-xl bg-patriot-accent/10 flex items-center justify-center">
+              <svg class="w-7 h-7 text-patriot-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </div>
+            <h3 class="font-heading text-xl font-semibold mb-2">Підтримка 24/7</h3>
+            <p class="text-patriot-muted text-sm">Консультація з вибору та технічна допомога</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="py-24 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+          <div>
+            <span class="text-xs uppercase tracking-[0.3em] text-patriot-accent font-medium">Про Patriot</span>
+            <h2 class="font-heading text-4xl sm:text-5xl font-bold mt-3 mb-6">Ваш надійний партнер з 2012 року</h2>
+            <p class="text-patriot-muted leading-relaxed mb-6">
+              Patriot — це більше ніж магазин. Ми об'єднуємо любов до якісної пневматики, колекціонування та тактичного спорядження. Кожен товар у нашому каталозі проходить ретельний відбір.
+            </p>
+            <p class="text-patriot-muted leading-relaxed mb-8">
+              Працюємо лише з перевіреними постачальниками: Umarex, Zippo, Sabre, Cold Steel та іншими світовими брендами. Дотримуємось усіх вимог законодавства України щодо продажу пневматичної зброї та засобів самооборони.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <span class="badge">Сертифікована продукція</span>
+              <span class="badge">Ліцензований продаж</span>
+              <span class="badge">Консультація експертів</span>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="about-image rounded-2xl overflow-hidden aspect-[4/5]">
+              <div class="about-image-inner w-full h-full"></div>
+            </div>
+            <div class="absolute -bottom-6 -left-6 glass-card p-6 max-w-xs">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="flex -space-x-2">
+                  <div class="w-8 h-8 rounded-full bg-stone-300 border-2 border-white"></div>
+                  <div class="w-8 h-8 rounded-full bg-stone-400 border-2 border-white"></div>
+                  <div class="w-8 h-8 rounded-full bg-stone-500 border-2 border-white"></div>
+                </div>
+                <span class="text-sm font-medium">2 400+ клієнтів</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-patriot-accent" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <svg class="w-4 h-4 text-patriot-accent" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <svg class="w-4 h-4 text-patriot-accent" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <svg class="w-4 h-4 text-patriot-accent" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <svg class="w-4 h-4 text-patriot-accent" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                <span class="text-sm text-patriot-muted ml-1">4.9 з 5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Newsletter -->
+    <section class="py-16 px-4 sm:px-6">
+      <div class="max-w-4xl mx-auto">
+        <div class="glass-card-dark rounded-3xl p-8 sm:p-12 text-center">
+          <h2 class="font-heading text-3xl sm:text-4xl font-bold text-white mb-4">Будьте в курсі новинок</h2>
+          <p class="text-stone-400 mb-8 max-w-lg mx-auto">Підпишіться на розсилку та отримуйте знижки на нові надходження першими</p>
+          <form id="newsletter-form" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <label for="newsletter-email" class="sr-only">Email</label>
+            <input type="email" id="newsletter-email" placeholder="your@email.com" required class="flex-1 px-5 py-3 rounded-xl bg-white/10 border border-white/10 text-white placeholder:text-stone-500 outline-none focus:border-patriot-accent transition-colors duration-200">
+            <button type="submit" class="btn-primary whitespace-nowrap cursor-pointer">Підписатися</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer id="contact" class="bg-patriot-primary text-stone-400 pt-16 pb-8 px-4 sm:px-6">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div>
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-lg bg-patriot-accent/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-patriot-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3L4 9v12h16V9l-8-6z"/>
+              </svg>
+            </div>
+            <span class="font-heading text-2xl font-bold text-white tracking-wider">PATRIOT</span>
+          </div>
+          <p class="text-sm leading-relaxed">Преміальний інтернет-магазин пневматики, колекційних виробів та тактичного спорядження.</p>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Каталог</h4>
+          <ul class="space-y-3 text-sm">
+            <li><a href="#catalog" data-filter="pneumatic" class="footer-link cursor-pointer">Пневматична зброя</a></li>
+            <li><a href="#catalog" data-filter="statues" class="footer-link cursor-pointer">Статуетки</a></li>
+            <li><a href="#catalog" data-filter="zippo" class="footer-link cursor-pointer">Zippo</a></li>
+            <li><a href="#catalog" data-filter="defense" class="footer-link cursor-pointer">Самооборона</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Інформація</h4>
+          <ul class="space-y-3 text-sm">
+            <li><a href="#about" class="footer-link cursor-pointer">Про нас</a></li>
+            <li><a href="#" class="footer-link cursor-pointer">Доставка та оплата</a></li>
+            <li><a href="#" class="footer-link cursor-pointer">Гарантія</a></li>
+            <li><a href="#" class="footer-link cursor-pointer">Політика конфіденційності</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Контакти</h4>
+          <ul class="space-y-3 text-sm">
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-patriot-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              +38 (067) 123-45-67
+            </li>
+            <li class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-patriot-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+              info@patriot-store.ua
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 text-patriot-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              м. Київ, вул. Хрещатик, 1
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-white/10 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs">
+        <p>&copy; 2026 Patriot Store. Усі права захищені.</p>
+        <p class="text-stone-600">Продаж пневматичної зброї особам від 18 років</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] px-6 py-3 rounded-xl bg-patriot-primary text-white text-sm font-medium shadow-2xl translate-y-20 opacity-0 transition-all duration-300 pointer-events-none" role="status" aria-live="polite"></div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
