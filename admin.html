@@ -89,6 +89,7 @@
             <input type="file" id="btn-import" accept=".json" class="hidden">
           </label>
           <button id="btn-reset" class="btn-secondary cursor-pointer text-sm">Скинути</button>
+          <button id="btn-sync-db" class="btn-secondary cursor-pointer text-sm">Синхронізувати з БД</button>
         </div>
         <div class="admin-stats grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div class="glass-card p-4 text-center">
@@ -108,10 +109,12 @@
             <table class="admin-table w-full">
               <thead>
                 <tr>
+                  <th>Фото</th>
                   <th>ID</th>
                   <th>Назва</th>
                   <th>Категорія</th>
                   <th>Ціна</th>
+                  <th>Наявність</th>
                   <th>Бейдж</th>
                   <th>Дії</th>
                 </tr>
@@ -269,6 +272,7 @@
             <li><strong class="text-patriot-text">2.</strong> SQL Editor → <code class="bg-patriot-surface px-1 rounded">data/supabase-setup.sql</code> → Run</li>
             <li><strong class="text-patriot-text">3.</strong> Settings → API → URL + anon key + service role key</li>
             <li><strong class="text-patriot-text">4.</strong> Налаштуйте авторизацію (блок вище)</li>
+            <li><strong class="text-patriot-text">5.</strong> Товари та фото зберігаються в таблиці <code class="bg-patriot-surface px-1 rounded">products</code> і Storage <code class="bg-patriot-surface px-1 rounded">product-images</code></li>
           </ol>
         </div>
       </div>
@@ -302,8 +306,44 @@
             </select>
           </div>
           <div>
-            <label for="product-price-input" class="admin-label">Ціна (₴) *</label>
+            <label for="product-price-input" class="admin-label">Звичайна ціна (₴) *</label>
             <input type="number" id="product-price-input" required min="0" class="admin-input">
+          </div>
+          <div>
+            <label for="product-sale-price-input" class="admin-label">Акційна ціна (₴)</label>
+            <input type="number" id="product-sale-price-input" min="0" class="admin-input" placeholder="Необов'язково">
+            <p class="text-xs text-patriot-muted mt-1">Має бути нижче звичайної ціни</p>
+          </div>
+          <div class="sm:col-span-2 admin-images-block">
+            <label class="admin-label">Основне фото</label>
+            <div class="admin-image-main-wrap">
+              <div id="main-image-preview" class="admin-image-preview admin-image-preview--main hidden">
+                <img id="main-image-preview-img" src="" alt="">
+              </div>
+              <div id="main-image-placeholder" class="admin-image-placeholder">Фото не додано</div>
+            </div>
+            <div class="admin-image-actions">
+              <label class="btn-secondary cursor-pointer text-sm admin-file-btn">
+                Завантажити
+                <input type="file" id="main-image-file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+              </label>
+              <input type="url" id="main-image-url" class="admin-input admin-image-url-input" placeholder="або посилання https://...">
+              <button type="button" id="main-image-remove" class="btn-secondary text-sm hidden cursor-pointer">Видалити</button>
+            </div>
+
+            <label class="admin-label mt-5">Додаткові фото</label>
+            <div id="extra-images-list" class="admin-extra-images"></div>
+            <label class="btn-secondary cursor-pointer text-sm admin-file-btn mt-2 inline-flex">
+              + Додати фото
+              <input type="file" id="extra-image-file" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden">
+            </label>
+          </div>
+          <div>
+            <label for="product-stock-input" class="admin-label">Наявність *</label>
+            <select id="product-stock-input" required class="admin-input">
+              <option value="in_stock">В наявності</option>
+              <option value="out_of_stock">Немає в наявності</option>
+            </select>
           </div>
           <div>
             <label for="product-badge-input" class="admin-label">Бейдж</label>

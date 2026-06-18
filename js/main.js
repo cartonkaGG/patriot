@@ -3,30 +3,23 @@
 let currentFilter = 'all';
 
 function createProductCard(product) {
-  const badgeHtml = product.badge
-    ? `<span class="product-badge ${product.badge}">${product.badge === 'hit' ? 'Хіт' : 'Новинка'}</span>`
-    : '';
-
+  const inStock = isProductInStock(product);
   return `
     <article class="product-card fade-in" data-id="${product.id}" data-category="${product.category}">
-      <a href="${getProductUrl(product.id)}" target="_blank" rel="noopener" class="block product-link cursor-pointer">
-        <div class="product-image img-${product.category}">
-          ${badgeHtml}
-          <svg class="product-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            ${getProductIcon(product.category)}
-          </svg>
-        </div>
+      <a href="${getProductUrl(product.id)}" class="block product-link cursor-pointer">
+        ${renderProductVisual(product)}
       </a>
       <div class="p-5">
         <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${CATEGORY_LABELS[product.category]}</span>
-        <a href="${getProductUrl(product.id)}" target="_blank" rel="noopener" class="block cursor-pointer">
+        <a href="${getProductUrl(product.id)}" class="block cursor-pointer">
           <h3 class="font-heading text-lg font-semibold mt-1 mb-1 leading-tight hover:text-patriot-accent transition-colors duration-200">${product.name}</h3>
         </a>
-        <p class="text-patriot-muted text-xs mb-4 line-clamp-2">${product.description}</p>
+        <p class="text-patriot-muted text-xs mb-2 line-clamp-2">${product.description}</p>
+        <p class="text-xs mb-3"><span class="stock-badge ${inStock ? 'stock-badge--in' : 'stock-badge--out'}">${formatStockLabel(product)}</span></p>
         <div class="flex items-center justify-between gap-3">
-          <span class="font-semibold text-lg">${formatPrice(product.price)}</span>
-          <button class="add-to-cart-btn cursor-pointer" data-id="${product.id}" aria-label="Додати ${product.name} до кошика">
-            У кошик
+          <div class="product-price-inline">${formatProductPriceHtml(product)}</div>
+          <button class="add-to-cart-btn cursor-pointer${inStock ? '' : ' add-to-cart-btn--disabled'}" data-id="${product.id}" ${inStock ? '' : 'disabled'} aria-label="Додати ${product.name} до кошика">
+            ${inStock ? 'У кошик' : 'Немає'}
           </button>
         </div>
       </div>
@@ -35,24 +28,21 @@ function createProductCard(product) {
 }
 
 function createShowcaseCard(product) {
+  const inStock = isProductInStock(product);
   return `
     <div class="showcase-card" data-id="${product.id}">
-      <a href="${getProductUrl(product.id)}" target="_blank" rel="noopener" class="block cursor-pointer">
-        <div class="showcase-image img-${product.category}">
-          <svg class="product-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            ${getProductIcon(product.category)}
-          </svg>
-        </div>
+      <a href="${getProductUrl(product.id)}" class="block cursor-pointer">
+        ${renderProductVisual(product, { className: 'showcase-image', iconClass: 'product-icon' })}
       </a>
       <div class="p-5">
         <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${CATEGORY_LABELS[product.category]}</span>
-        <a href="${getProductUrl(product.id)}" target="_blank" rel="noopener" class="block cursor-pointer">
+        <a href="${getProductUrl(product.id)}" class="block cursor-pointer">
           <h3 class="font-heading text-xl text-white font-semibold mt-1 mb-2 hover:text-patriot-accent transition-colors duration-200">${product.name}</h3>
         </a>
         <div class="flex items-center justify-between">
-          <span class="text-white font-semibold">${formatPrice(product.price)}</span>
-          <button class="text-patriot-accent text-sm font-medium hover:text-patriot-accent-light transition-colors cursor-pointer add-to-cart-btn" data-id="${product.id}">
-            + Кошик
+          <div class="product-price-inline product-price-inline--light">${formatProductPriceHtml(product)}</div>
+          <button class="text-patriot-accent text-sm font-medium hover:text-patriot-accent-light transition-colors cursor-pointer add-to-cart-btn${inStock ? '' : ' add-to-cart-btn--disabled'}" data-id="${product.id}" ${inStock ? '' : 'disabled'}>
+            ${inStock ? '+ Кошик' : 'Немає'}
           </button>
         </div>
       </div>
@@ -121,7 +111,7 @@ function handleSearch(query) {
   }
 
   resultsEl.innerHTML = results.map(p => `
-    <a href="${getProductUrl(p.id)}" target="_blank" rel="noopener" class="search-result-item cursor-pointer">
+    <a href="${getProductUrl(p.id)}" class="search-result-item cursor-pointer">
       <div class="w-10 h-10 rounded-lg img-${p.category} flex items-center justify-center flex-shrink-0">
         <svg class="w-5 h-5 text-patriot-accent/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           ${getProductIcon(p.category)}
@@ -129,7 +119,7 @@ function handleSearch(query) {
       </div>
       <div class="flex-1 min-w-0">
         <p class="font-medium text-sm truncate">${p.name}</p>
-        <p class="text-patriot-muted text-xs">${formatPrice(p.price)}</p>
+        <p class="text-patriot-muted text-xs">${formatProductPriceHtml(p)}</p>
       </div>
     </a>
   `).join('');

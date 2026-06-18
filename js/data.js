@@ -104,6 +104,87 @@ function formatPrice(price) {
   return Number(price).toLocaleString('uk-UA') + ' ₴';
 }
 
+function hasSalePrice(product) {
+  return product?.salePrice != null && product.salePrice > 0 && product.salePrice < product.price;
+}
+
+function getEffectivePrice(product) {
+  return hasSalePrice(product) ? product.salePrice : product.price;
+}
+
+function formatProductPriceHtml(product, sizeClass = '') {
+  if (hasSalePrice(product)) {
+    return `<span class="price-sale ${sizeClass}">${formatPrice(product.salePrice)}</span><span class="price-old">${formatPrice(product.price)}</span>`;
+  }
+  return `<span class="price-regular ${sizeClass}">${formatPrice(product.price)}</span>`;
+}
+
+function isProductInStock(product) {
+  return product?.inStock !== false;
+}
+
+function formatStockLabel(product) {
+  return isProductInStock(product) ? 'В наявності' : 'Немає в наявності';
+}
+
+function renderCartItemThumb(item, extraClass = '') {
+  const imageClass = ['cart-item-image', extraClass].filter(Boolean).join(' ');
+
+  if (item.image) {
+    return `
+      <a href="${getProductUrl(item.id)}" class="${imageClass} cart-item-image--photo cursor-pointer flex-shrink-0">
+        <img src="${item.image}" alt="" loading="lazy">
+      </a>`;
+  }
+
+  return `
+    <a href="${getProductUrl(item.id)}" class="${imageClass} img-${item.category} cursor-pointer flex-shrink-0">
+      <svg class="w-6 h-6 text-patriot-accent/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        ${getProductIcon(item.category)}
+      </svg>
+    </a>`;
+}
+
+function getProductGallery(product) {
+  const gallery = [];
+  if (product?.image) gallery.push(product.image);
+  if (Array.isArray(product?.images)) {
+    product.images.filter(Boolean).forEach(src => {
+      if (!gallery.includes(src)) gallery.push(src);
+    });
+  }
+  return gallery;
+}
+
+function renderProductVisual(product, options = {}) {
+  const {
+    className = 'product-image',
+    iconClass = 'product-icon',
+    showBadge = true,
+    imgClass = 'product-photo'
+  } = options;
+
+  const badgeHtml = showBadge && product.badge
+    ? `<span class="product-badge ${product.badge}">${product.badge === 'hit' ? 'Хіт' : 'Новинка'}</span>`
+    : '';
+
+  if (product.image) {
+    return `
+      <div class="${className} product-image--photo">
+        ${badgeHtml}
+        <img src="${product.image}" alt="" class="${imgClass}" loading="lazy">
+      </div>`;
+  }
+
+  return `
+    <div class="${className} img-${product.category}">
+      ${badgeHtml}
+      <svg class="${iconClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        ${getProductIcon(product.category)}
+      </svg>
+    </div>`;
+}
+
 function getProductIcon(category) {
   return CATEGORY_ICONS[category] || CATEGORY_ICONS.accessories;
 }
@@ -112,8 +193,17 @@ function getProductUrl(id) {
   return `product.html?id=${id}`;
 }
 
-async function loadProducts() {
-  if (productsCache) return productsCache;
+async function loadProducts(forceReload = false) {
+  if (productsCache && !forceReload) return productsCache;
+
+  if (typeof fetchProductsFromDb === 'function' && typeof isSupabaseConfigured === 'function' && isSupabaseConfigured()) {
+    const dbProducts = await fetchProductsFromDb();
+    if (dbProducts && dbProducts.length > 0) {
+      productsCache = dbProducts;
+      localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(productsCache));
+      return productsCache;
+    }
+  }
 
   const stored = localStorage.getItem(STORAGE_PRODUCTS_KEY);
   if (stored) {
@@ -142,6 +232,39 @@ async function loadProducts() {
 function saveProducts(products) {
   productsCache = products;
   localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(products));
+}
+
+async function persistProduct(product) {
+  const synced = typeof syncProductImagesToStorage === 'function'
+    ? await syncProductImagesToStorage(product)
+    : product;
+
+  const idx = productsCache.findIndex(p => p.id === synced.id);
+  if (idx !== -1) {
+    productsCache[idx] = synced;
+  } else {
+    productsCache.push(synced);
+  }
+  saveProducts(productsCache);
+
+  if (typeof saveProductToDb === 'function') {
+    const { error } = await saveProductToDb(synced);
+    if (error) {
+      showToast('Збережено локально. Помилка БД: ' + error);
+      return synced;
+    }
+  }
+
+  return synced;
+}
+
+async function removeProduct(productId) {
+  productsCache = productsCache.filter(p => p.id !== productId);
+  saveProducts(productsCache);
+
+  if (typeof deleteProductFromDb === 'function') {
+    await deleteProductFromDb(productId);
+  }
 }
 
 function getProductById(id) {

@@ -102,16 +102,24 @@
                 <div class="space-y-3 mb-6">
                   <label class="delivery-option cursor-pointer">
                     <input type="radio" name="delivery" value="nova_poshta" checked>
+                    <span class="delivery-option-icon delivery-option-icon--np" aria-hidden="true">
+                      <img src="assets/nova-poshta.png" alt="" width="40" height="40" class="np-logo">
+                    </span>
                     <span class="delivery-option-content">
                       <span class="font-medium">Нова Пошта</span>
                       <span class="text-patriot-muted text-xs">Доставка у відділення</span>
+                      <span class="delivery-option-note">Вартість доставки за тарифами перевізника</span>
                     </span>
                   </label>
                   <label class="delivery-option cursor-pointer">
                     <input type="radio" name="delivery" value="pickup">
+                    <span class="delivery-option-icon delivery-option-icon--pickup" aria-hidden="true">
+                      <svg class="w-10 h-10 text-patriot-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    </span>
                     <span class="delivery-option-content">
                       <span class="font-medium">Самовивіз з магазину</span>
                       <span class="text-patriot-muted text-xs">м. Луцьк, проспект Волі, 1, ЦУМ 5 поверх</span>
+                      <span class="delivery-option-note delivery-option-note--free">Доставка безкоштовно</span>
                     </span>
                   </label>
                 </div>

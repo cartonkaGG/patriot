@@ -5,6 +5,104 @@ const ADMIN_REMEMBER_KEY = 'patriot-admin-remember';
 const REMEMBER_DAYS = 30;
 
 let editingProductId = null;
+let modalMainImage = '';
+let modalExtraImages = [];
+
+function compressImageFile(file, maxSize = 1200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round(height * (maxSize / width));
+            width = maxSize;
+          } else {
+            width = Math.round(width * (maxSize / height));
+            height = maxSize;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderMainImagePreview() {
+  const preview = document.getElementById('main-image-preview');
+  const placeholder = document.getElementById('main-image-placeholder');
+  const img = document.getElementById('main-image-preview-img');
+  const removeBtn = document.getElementById('main-image-remove');
+  if (!preview) return;
+
+  if (modalMainImage) {
+    img.src = modalMainImage;
+    preview.classList.remove('hidden');
+    placeholder.classList.add('hidden');
+    removeBtn.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+    removeBtn.classList.add('hidden');
+    img.src = '';
+  }
+}
+
+function renderExtraImagesPreview() {
+  const list = document.getElementById('extra-images-list');
+  if (!list) return;
+  list.innerHTML = modalExtraImages.map((src, index) => `
+    <div class="admin-extra-image-item">
+      <img src="${src}" alt="">
+      <button type="button" class="admin-extra-image-remove cursor-pointer" data-index="${index}" aria-label="Видалити фото">×</button>
+    </div>
+  `).join('');
+}
+
+function resetModalImages() {
+  modalMainImage = '';
+  modalExtraImages = [];
+  const urlInput = document.getElementById('main-image-url');
+  const mainFile = document.getElementById('main-image-file');
+  const extraFile = document.getElementById('extra-image-file');
+  if (urlInput) urlInput.value = '';
+  if (mainFile) mainFile.value = '';
+  if (extraFile) extraFile.value = '';
+  renderMainImagePreview();
+  renderExtraImagesPreview();
+}
+
+function loadModalImages(product) {
+  modalMainImage = product?.image || '';
+  modalExtraImages = Array.isArray(product?.images) ? [...product.images] : [];
+  const urlInput = document.getElementById('main-image-url');
+  if (urlInput) {
+    urlInput.value = modalMainImage && !modalMainImage.startsWith('data:') ? modalMainImage : '';
+  }
+  renderMainImagePreview();
+  renderExtraImagesPreview();
+}
+
+async function handleImageFiles(files, onReady) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    try {
+      onReady(await compressImageFile(file));
+    } catch {
+      showToast('Не вдалося завантажити зображення');
+    }
+  }
+}
 
 function isAuthenticated() {
   if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true') return true;
@@ -61,12 +159,18 @@ function renderAdminTable(filter = '') {
 
   tbody.innerHTML = filtered.map(p => `
     <tr>
+      <td>
+        ${p.image
+          ? `<img src="${p.image}" alt="" class="admin-table-thumb">`
+          : `<div class="admin-table-thumb admin-table-thumb--empty img-${p.category}"></div>`}
+      </td>
       <td>${p.id}</td>
       <td>
-        <a href="${getProductUrl(p.id)}" target="_blank" class="hover:text-patriot-accent transition-colors cursor-pointer font-medium">${p.name}</a>
+        <a href="${getProductUrl(p.id)}" class="hover:text-patriot-accent transition-colors cursor-pointer font-medium">${p.name}</a>
       </td>
       <td>${CATEGORY_LABELS[p.category]}</td>
-      <td>${formatPrice(p.price)}</td>
+      <td>${formatProductPriceHtml(p, 'text-sm')}</td>
+      <td><span class="stock-badge ${isProductInStock(p) ? 'stock-badge--in' : 'stock-badge--out'}">${formatStockLabel(p)}</span></td>
       <td>${p.badge ? (p.badge === 'hit' ? 'Хіт' : 'Новинка') : '—'}</td>
       <td>
         <div class="flex gap-2">
@@ -92,10 +196,14 @@ function openModal(product = null) {
   document.getElementById('product-name-input').value = product ? product.name : '';
   document.getElementById('product-category-input').value = product ? product.category : 'pneumatic';
   document.getElementById('product-price-input').value = product ? product.price : '';
+  document.getElementById('product-sale-price-input').value = product?.salePrice ?? '';
+  document.getElementById('product-stock-input').value = product && product.inStock === false ? 'out_of_stock' : 'in_stock';
   document.getElementById('product-badge-input').value = product ? (product.badge || '') : '';
   document.getElementById('product-desc-input').value = product ? product.description : '';
   document.getElementById('product-full-desc-input').value = product ? (product.fullDescription || '') : '';
   document.getElementById('product-specs-input').value = product && product.specs ? product.specs.join('\n') : '';
+
+  loadModalImages(product);
 
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -108,50 +216,94 @@ function closeModal() {
   modal.classList.remove('flex');
   editingProductId = null;
   document.getElementById('product-form').reset();
+  resetModalImages();
 }
 
 function saveProductFromForm(e) {
   e.preventDefault();
+  saveProductFromFormAsync(e);
+}
 
+async function saveProductFromFormAsync(e) {
   const specsRaw = document.getElementById('product-specs-input').value.trim();
   const badge = document.getElementById('product-badge-input').value;
+  const price = parseInt(document.getElementById('product-price-input').value, 10);
+  const saleRaw = document.getElementById('product-sale-price-input').value.trim();
+  const salePrice = saleRaw ? parseInt(saleRaw, 10) : null;
+
+  if (salePrice != null && salePrice >= price) {
+    showToast('Акційна ціна має бути нижче звичайної');
+    return;
+  }
 
   const productData = {
     name: document.getElementById('product-name-input').value.trim(),
     category: document.getElementById('product-category-input').value,
-    price: parseInt(document.getElementById('product-price-input').value, 10),
+    price,
+    salePrice: salePrice != null && salePrice > 0 ? salePrice : null,
     badge: badge || null,
     description: document.getElementById('product-desc-input').value.trim(),
     fullDescription: document.getElementById('product-full-desc-input').value.trim() || document.getElementById('product-desc-input').value.trim(),
-    specs: specsRaw ? specsRaw.split('\n').map(s => s.trim()).filter(Boolean) : []
+    specs: specsRaw ? specsRaw.split('\n').map(s => s.trim()).filter(Boolean) : [],
+    image: modalMainImage || null,
+    images: modalExtraImages.filter(Boolean),
+    inStock: document.getElementById('product-stock-input').value === 'in_stock'
   };
 
-  if (editingProductId) {
-    const idx = productsCache.findIndex(p => p.id === editingProductId);
-    if (idx !== -1) {
-      productsCache[idx] = { ...productsCache[idx], ...productData };
-    }
-    showToast('Товар оновлено');
-  } else {
-    productData.id = getNextProductId();
-    productsCache.push(productData);
-    showToast('Товар додано');
-  }
+  const saveBtn = document.querySelector('#product-form button[type="submit"]');
+  if (saveBtn) saveBtn.disabled = true;
+  showToast('Збереження...');
 
-  saveProducts(productsCache);
-  renderAdminTable(document.getElementById('admin-search').value);
-  closeModal();
+  try {
+    if (editingProductId) {
+      const existing = productsCache.find(p => p.id === editingProductId);
+      productData.id = editingProductId;
+      await persistProduct({ ...existing, ...productData });
+      showToast('Товар оновлено');
+    } else {
+      productData.id = getNextProductId();
+      await persistProduct(productData);
+      showToast('Товар додано');
+    }
+
+    renderAdminTable(document.getElementById('admin-search').value);
+    closeModal();
+  } catch (err) {
+    showToast('Помилка збереження');
+    console.error(err);
+  } finally {
+    if (saveBtn) saveBtn.disabled = false;
+  }
 }
 
-function deleteProduct(id) {
+async function deleteProduct(id) {
   const product = productsCache.find(p => p.id === id);
   if (!product) return;
   if (!confirm(`Видалити «${product.name}»?`)) return;
 
-  productsCache = productsCache.filter(p => p.id !== id);
-  saveProducts(productsCache);
+  await removeProduct(id);
   renderAdminTable(document.getElementById('admin-search').value);
   showToast('Товар видалено');
+}
+
+async function syncCatalogToDb() {
+  if (!getSupabaseAdmin()) {
+    showToast('Потрібен Service Role Key у налаштуваннях');
+    return;
+  }
+  if (!confirm('Завантажити всі товари та фото в Supabase?')) return;
+
+  showToast('Синхронізація з БД...');
+  const { synced, error } = await syncAllProductsToDb(productsCache);
+  if (error) {
+    showToast('Помилка: ' + error);
+    return;
+  }
+
+  productsCache = null;
+  await loadProducts(true);
+  renderAdminTable(document.getElementById('admin-search').value);
+  showToast(`Синхронізовано ${synced} товарів`);
 }
 
 async function resetProducts() {
@@ -166,11 +318,15 @@ async function resetProducts() {
 
 function importProducts(file) {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const imported = JSON.parse(e.target.result);
       if (!Array.isArray(imported)) throw new Error('Invalid format');
       saveProducts(imported);
+      if (typeof syncAllProductsToDb === 'function') {
+        showToast('Синхронізація з БД...');
+        await syncAllProductsToDb(imported);
+      }
       renderAdminTable();
       showToast(`Імпортовано ${imported.length} товарів`);
     } catch {
@@ -395,6 +551,47 @@ function initAdmin() {
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   document.getElementById('product-form').addEventListener('submit', saveProductFromForm);
 
+  document.getElementById('main-image-file').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await handleImageFiles([file], (src) => {
+      modalMainImage = src;
+      document.getElementById('main-image-url').value = '';
+      renderMainImagePreview();
+    });
+    e.target.value = '';
+  });
+
+  document.getElementById('main-image-url').addEventListener('change', (e) => {
+    const url = e.target.value.trim();
+    if (url) {
+      modalMainImage = url;
+      renderMainImagePreview();
+    }
+  });
+
+  document.getElementById('main-image-remove').addEventListener('click', () => {
+    modalMainImage = '';
+    document.getElementById('main-image-url').value = '';
+    renderMainImagePreview();
+  });
+
+  document.getElementById('extra-image-file').addEventListener('change', async (e) => {
+    if (!e.target.files?.length) return;
+    await handleImageFiles(Array.from(e.target.files), (src) => {
+      modalExtraImages.push(src);
+      renderExtraImagesPreview();
+    });
+    e.target.value = '';
+  });
+
+  document.getElementById('extra-images-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('.admin-extra-image-remove');
+    if (!btn) return;
+    modalExtraImages.splice(parseInt(btn.dataset.index, 10), 1);
+    renderExtraImagesPreview();
+  });
+
   document.getElementById('product-modal').addEventListener('click', (e) => {
     if (e.target.id === 'product-modal') closeModal();
   });
@@ -410,6 +607,7 @@ function initAdmin() {
   });
 
   document.getElementById('btn-reset').addEventListener('click', resetProducts);
+  document.getElementById('btn-sync-db').addEventListener('click', syncCatalogToDb);
 
   document.getElementById('admin-search').addEventListener('input', (e) => {
     renderAdminTable(e.target.value);

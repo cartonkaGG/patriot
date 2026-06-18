@@ -91,12 +91,25 @@
         <span id="breadcrumb-name" class="text-patriot-text"></span>
       </nav>
       <div class="grid lg:grid-cols-2 gap-12">
-        <div class="product-detail-image rounded-2xl overflow-hidden aspect-square" id="product-image"></div>
+        <div>
+          <div class="product-image-viewer">
+            <button type="button" id="gallery-prev" class="gallery-nav gallery-nav--prev hidden cursor-pointer" aria-label="Попереднє фото">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="product-detail-image rounded-2xl overflow-hidden aspect-square" id="product-image"></div>
+            <button type="button" id="gallery-next" class="gallery-nav gallery-nav--next hidden cursor-pointer" aria-label="Наступне фото">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <span id="gallery-counter" class="gallery-counter hidden" aria-live="polite"></span>
+          </div>
+          <div id="product-gallery" class="product-gallery hidden"></div>
+        </div>
         <div>
           <div id="product-badge" class="mb-3"></div>
           <span id="product-category" class="text-xs uppercase tracking-wider text-patriot-accent font-semibold"></span>
           <h1 id="product-name" class="font-heading text-4xl sm:text-5xl font-bold mt-2 mb-4"></h1>
-          <p id="product-price" class="font-heading text-3xl font-bold text-patriot-accent mb-6"></p>
+          <div id="product-price" class="product-price-block mb-2"></div>
+          <div id="product-stock" class="mb-6"></div>
           <p id="product-short-desc" class="text-patriot-muted leading-relaxed mb-8"></p>
           <div class="flex flex-col sm:flex-row gap-4 mb-10">
             <div class="qty-controls qty-controls-lg">
@@ -127,7 +140,9 @@
     <p>&copy; 2026 Patriot Store · <a href="tel:+380997577214" class="text-patriot-accent hover:underline cursor-pointer">+380 99 757 72 14</a></p>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/data.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script src="js/cart.js"></script>
   <script src="js/product.js"></script>
 </body>

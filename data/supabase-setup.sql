@@ -74,3 +74,39 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- Каталог товарів (фото — URL з Supabase Storage або зовнішні посилання)
+create table if not exists public.products (
+  id bigint primary key,
+  name text not null,
+  category text not null,
+  price numeric not null default 0,
+  sale_price numeric,
+  badge text,
+  description text not null default '',
+  full_description text,
+  specs jsonb not null default '[]',
+  in_stock boolean not null default true,
+  image text,
+  images jsonb not null default '[]',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.products enable row level security;
+
+create policy "Anyone can view products"
+  on public.products for select
+  using (true);
+
+-- Бакет для фото товарів (публічне читання)
+insert into storage.buckets (id, name, public)
+values ('product-images', 'product-images', true)
+on conflict (id) do update set public = true;
+
+alter table public.products add column if not exists in_stock boolean not null default true;
+alter table public.products add column if not exists image text;
+
+create policy "Public read product images"
+  on storage.objects for select
+  using (bucket_id = 'product-images');

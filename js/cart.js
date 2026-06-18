@@ -21,16 +21,58 @@ async function addToCart(productId, qty = 1) {
   const product = products.find(p => p.id === productId);
   if (!product) return;
 
+  if (!isProductInStock(product)) {
+    showToast('Товар зараз відсутній');
+    return;
+  }
+
   const existing = cart.find(item => item.id === productId);
   if (existing) {
     existing.qty += qty;
+    existing.price = getEffectivePrice(product);
+    existing.image = product.image || existing.image || null;
+    existing.category = product.category;
   } else {
-    cart.push({ id: product.id, name: product.name, category: product.category, price: product.price, qty });
+    cart.push({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      price: getEffectivePrice(product),
+      image: product.image || null,
+      qty
+    });
   }
 
   persistCart();
   updateCartUI();
   showToast(`${product.name} додано до кошика`);
+}
+
+function syncCartWithProducts() {
+  if (!productsCache?.length) return false;
+
+  let changed = false;
+  cart.forEach(item => {
+    const product = productsCache.find(p => p.id === item.id);
+    if (!product) return;
+
+    const price = getEffectivePrice(product);
+    if (item.price !== price) {
+      item.price = price;
+      changed = true;
+    }
+    if (!item.image && product.image) {
+      item.image = product.image;
+      changed = true;
+    }
+    if (item.category !== product.category) {
+      item.category = product.category;
+      changed = true;
+    }
+  });
+
+  if (changed) persistCart();
+  return changed;
 }
 
 function removeFromCart(productId) {
@@ -82,6 +124,8 @@ function updateCartUI() {
 
   if (!itemsEl) return;
 
+  syncCartWithProducts();
+
   const totalItems = getCartCount();
   const totalPrice = getCartTotal();
 
@@ -111,13 +155,9 @@ function updateCartUI() {
 
   itemsEl.innerHTML = cart.map(item => `
     <div class="cart-item">
-      <a href="${getProductUrl(item.id)}" target="_blank" class="cart-item-image img-${item.category} cursor-pointer flex-shrink-0">
-        <svg class="w-6 h-6 text-patriot-accent/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          ${getProductIcon(item.category)}
-        </svg>
-      </a>
+      ${renderCartItemThumb(item)}
       <div class="flex-1 min-w-0">
-        <a href="${getProductUrl(item.id)}" target="_blank" class="font-medium text-sm truncate block hover:text-patriot-accent transition-colors cursor-pointer">${item.name}</a>
+        <a href="${getProductUrl(item.id)}" class="font-medium text-sm truncate block hover:text-patriot-accent transition-colors cursor-pointer">${item.name}</a>
         <p class="text-patriot-muted text-xs mt-0.5">${formatPrice(item.price)}</p>
         <div class="qty-controls mt-2">
           <button class="qty-btn cursor-pointer" data-action="decrease" data-id="${item.id}" aria-label="Зменшити кількість">−</button>

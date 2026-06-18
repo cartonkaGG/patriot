@@ -24,6 +24,7 @@ function renderOrderSummary() {
 
   container.innerHTML = cart.map(item => `
     <div class="checkout-item">
+      ${renderCartItemThumb(item, 'checkout-item-image')}
       <div class="flex-1 min-w-0">
         <p class="font-medium text-sm truncate">${item.name}</p>
         <p class="text-patriot-muted text-xs">${item.qty} × ${formatPrice(item.price)}</p>
@@ -179,7 +180,7 @@ async function handleCheckoutSubmit(e) {
       delivery: getDeliveryInfo(method),
       payment: payment,
       comment: document.getElementById('order-comment').value.trim(),
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image || null, category: i.category })),
       total: getCartTotal(),
       status: payment === 'online' ? 'awaiting_payment' : 'new'
     };
@@ -213,6 +214,9 @@ async function handleCheckoutSubmit(e) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   loadCart();
+  await loadProducts();
+  syncCartWithProducts();
+  updateCartUI();
 
   if (cart.length === 0) {
     document.getElementById('checkout-empty').classList.remove('hidden');

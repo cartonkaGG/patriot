@@ -167,3 +167,141 @@ async function updateOrderStatusInDb(orderId, status) {
   if (error) return { error: error.message };
   return { error: null };
 }
+
+const PRODUCT_IMAGES_BUCKET = 'product-images';
+
+function dbProductToApp(row) {
+  return {
+    id: Number(row.id),
+    name: row.name,
+    category: row.category,
+    price: Number(row.price),
+    salePrice: row.sale_price != null ? Number(row.sale_price) : null,
+    badge: row.badge || null,
+    description: row.description || '',
+    fullDescription: row.full_description || row.description || '',
+    specs: Array.isArray(row.specs) ? row.specs : [],
+    image: row.image || null,
+    images: Array.isArray(row.images) ? row.images.filter(Boolean) : [],
+    inStock: row.in_stock !== false
+  };
+}
+
+function appProductToDb(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    sale_price: product.salePrice ?? null,
+    badge: product.badge || null,
+    description: product.description,
+    full_description: product.fullDescription || product.description,
+    specs: product.specs || [],
+    image: product.image || null,
+    images: product.images || [],
+    in_stock: product.inStock !== false,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function needsImageUpload(src) {
+  return Boolean(src && (src.startsWith('data:') || src.startsWith('blob:')));
+}
+
+async function uploadProductImageToStorage(admin, src, productId, filename) {
+  if (!src || !needsImageUpload(src)) return src;
+
+  try {
+    const response = await fetch(src);
+    const blob = await response.blob();
+    const ext = blob.type === 'image/png' ? 'png' : 'jpg';
+    const path = `${productId}/${filename.replace(/\.\w+$/, '')}.${ext}`;
+
+    const { error } = await admin.storage
+      .from(PRODUCT_IMAGES_BUCKET)
+      .upload(path, blob, { upsert: true, contentType: blob.type || 'image/jpeg' });
+
+    if (error) {
+      console.warn('Upload image:', error.message);
+      return src;
+    }
+
+    const { data } = admin.storage.from(PRODUCT_IMAGES_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  } catch (err) {
+    console.warn('Upload image failed:', err);
+    return src;
+  }
+}
+
+async function syncProductImagesToStorage(product) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return product;
+
+  const image = product.image
+    ? await uploadProductImageToStorage(admin, product.image, product.id, 'main.jpg')
+    : null;
+
+  const images = [];
+  for (let i = 0; i < (product.images || []).length; i++) {
+    const uploaded = await uploadProductImageToStorage(
+      admin,
+      product.images[i],
+      product.id,
+      `extra-${i + 1}.jpg`
+    );
+    if (uploaded) images.push(uploaded);
+  }
+
+  return { ...product, image, images };
+}
+
+async function fetchProductsFromDb() {
+  const client = getSupabase() || getSupabaseAdmin();
+  if (!client) return null;
+
+  const { data, error } = await client
+    .from('products')
+    .select('*')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.warn('Supabase products:', error.message);
+    return null;
+  }
+
+  return (data || []).map(dbProductToApp);
+}
+
+async function saveProductToDb(product) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return { error: null };
+
+  const payload = appProductToDb(product);
+  const { error } = await admin.from('products').upsert(payload, { onConflict: 'id' });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+async function deleteProductFromDb(productId) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return { error: null };
+
+  const { error } = await admin.from('products').delete().eq('id', productId);
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+async function syncAllProductsToDb(products) {
+  const admin = getSupabaseAdmin();
+  if (!admin) return { error: null, synced: 0 };
+
+  let synced = 0;
+  for (const product of products) {
+    const withImages = await syncProductImagesToStorage(product);
+    const { error } = await saveProductToDb(withImages);
+    if (!error) synced++;
+  }
+  return { error: null, synced };
+}
