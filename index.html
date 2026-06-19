@@ -216,11 +216,13 @@
         </div>
         <div class="bento-grid">
           <a href="#catalog" data-filter="pneumatic" class="bento-item bento-large category-card cursor-pointer group">
-            <div class="category-bg category-pneumatic"></div>
+            <div class="category-bg">
+              <img src="assets/categories/pneumatic.jpg" alt="" class="category-bg-image" loading="lazy">
+              <div class="category-bg-overlay"></div>
+            </div>
             <div class="category-content">
-              <svg class="w-10 h-10 text-patriot-accent mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
               <h3 class="font-heading text-3xl font-semibold text-white mb-2">Пневматика</h3>
-              <p class="text-stone-400 text-sm max-w-xs">Пістолети, гвинтівки, CO₂ та пружинні моделі від Glock, Beretta, Kalashnikov</p>
+              <p class="text-stone-300 text-sm max-w-xs">Пістолети та гвинтівки провідних брендів</p>
               <span class="inline-flex items-center gap-2 mt-4 text-patriot-accent text-sm font-medium group-hover:gap-3 transition-all duration-200">
                 Переглянути
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -228,31 +230,43 @@
             </div>
           </a>
           <a href="#catalog" data-filter="statues" class="bento-item category-card cursor-pointer group">
-            <div class="category-bg category-statues"></div>
+            <div class="category-bg">
+              <img src="assets/categories/statues.jpg" alt="" class="category-bg-image" loading="lazy">
+              <div class="category-bg-overlay"></div>
+            </div>
             <div class="category-content">
               <h3 class="font-heading text-2xl font-semibold text-white mb-2">Статуетки</h3>
-              <p class="text-stone-400 text-sm">Військова та історична тематика</p>
+              <p class="text-stone-300 text-sm">Військова та історична тематика</p>
             </div>
           </a>
           <a href="#catalog" data-filter="zippo" class="bento-item category-card cursor-pointer group">
-            <div class="category-bg category-zippo"></div>
+            <div class="category-bg">
+              <img src="assets/categories/zippo.jpg" alt="" class="category-bg-image" loading="lazy">
+              <div class="category-bg-overlay"></div>
+            </div>
             <div class="category-content">
               <h3 class="font-heading text-2xl font-semibold text-white mb-2">Zippo</h3>
-              <p class="text-stone-400 text-sm">Оригінальні запальнички та пальне</p>
+              <p class="text-stone-300 text-sm">Оригінальні запальнички та аксесуари</p>
             </div>
           </a>
           <a href="#catalog" data-filter="defense" class="bento-item category-card cursor-pointer group">
-            <div class="category-bg category-defense"></div>
+            <div class="category-bg">
+              <img src="assets/categories/defense.jpg" alt="" class="category-bg-image" loading="lazy">
+              <div class="category-bg-overlay"></div>
+            </div>
             <div class="category-content">
               <h3 class="font-heading text-2xl font-semibold text-white mb-2">Самооборона</h3>
-              <p class="text-stone-400 text-sm">Перцовки, брелоки, газові балончики</p>
+              <p class="text-stone-300 text-sm">Перцеві балончики та тактичні засоби</p>
             </div>
           </a>
           <a href="#catalog" data-filter="accessories" class="bento-item bento-wide category-card cursor-pointer group">
-            <div class="category-bg category-accessories"></div>
+            <div class="category-bg">
+              <img src="assets/categories/accessories.jpg" alt="" class="category-bg-image" loading="lazy">
+              <div class="category-bg-overlay"></div>
+            </div>
             <div class="category-content">
               <h3 class="font-heading text-2xl font-semibold text-white mb-2">Аксесуари</h3>
-              <p class="text-stone-400 text-sm">Ножі, фонарики, тактичні рукавички, чохли та інше спорядження</p>
+              <p class="text-stone-300 text-sm">Ножі, фонарики, тактичні рукавички, чохли та інше спорядження</p>
             </div>
           </a>
         </div>
@@ -285,11 +299,6 @@
           </div>
           <div class="flex flex-wrap gap-2" id="filter-buttons" role="tablist" aria-label="Фільтр категорій">
             <button class="filter-btn active cursor-pointer" data-filter="all" role="tab" aria-selected="true">Усі</button>
-            <button class="filter-btn cursor-pointer" data-filter="pneumatic" role="tab" aria-selected="false">Пневматика</button>
-            <button class="filter-btn cursor-pointer" data-filter="statues" role="tab" aria-selected="false">Статуетки</button>
-            <button class="filter-btn cursor-pointer" data-filter="zippo" role="tab" aria-selected="false">Zippo</button>
-            <button class="filter-btn cursor-pointer" data-filter="defense" role="tab" aria-selected="false">Самооборона</button>
-            <button class="filter-btn cursor-pointer" data-filter="accessories" role="tab" aria-selected="false">Аксесуари</button>
           </div>
         </div>
         <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>

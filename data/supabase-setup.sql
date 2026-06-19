@@ -79,6 +79,7 @@ create trigger on_auth_user_created
 create table if not exists public.products (
   id bigint primary key,
   name text not null,
+  code text,
   category text not null,
   price numeric not null default 0,
   sale_price numeric,
@@ -106,6 +107,7 @@ on conflict (id) do update set public = true;
 
 alter table public.products add column if not exists in_stock boolean not null default true;
 alter table public.products add column if not exists image text;
+alter table public.products add column if not exists code text;
 
 create policy "Public read product images"
   on storage.objects for select

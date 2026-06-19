@@ -173,6 +173,7 @@ const PRODUCT_IMAGES_BUCKET = 'product-images';
 function dbProductToApp(row) {
   return {
     id: Number(row.id),
+    code: row.code || null,
     name: row.name,
     category: row.category,
     price: Number(row.price),
@@ -190,6 +191,7 @@ function dbProductToApp(row) {
 function appProductToDb(product) {
   return {
     id: product.id,
+    code: product.code || null,
     name: product.name,
     category: product.category,
     price: product.price,

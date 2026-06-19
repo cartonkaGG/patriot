@@ -10,7 +10,7 @@ function createProductCard(product) {
         ${renderProductVisual(product)}
       </a>
       <div class="p-5">
-        <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${CATEGORY_LABELS[product.category]}</span>
+        <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${getCategoryLabel(product.category)}</span>
         <a href="${getProductUrl(product.id)}" class="block cursor-pointer">
           <h3 class="font-heading text-lg font-semibold mt-1 mb-1 leading-tight hover:text-patriot-accent transition-colors duration-200">${product.name}</h3>
         </a>
@@ -35,7 +35,7 @@ function createShowcaseCard(product) {
         ${renderProductVisual(product, { className: 'showcase-image', iconClass: 'product-icon' })}
       </a>
       <div class="p-5">
-        <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${CATEGORY_LABELS[product.category]}</span>
+        <span class="text-[10px] uppercase tracking-wider text-patriot-accent font-semibold">${getCategoryLabel(product.category)}</span>
         <a href="${getProductUrl(product.id)}" class="block cursor-pointer">
           <h3 class="font-heading text-xl text-white font-semibold mt-1 mb-2 hover:text-patriot-accent transition-colors duration-200">${product.name}</h3>
         </a>
@@ -70,12 +70,35 @@ function renderShowcase() {
   track.innerHTML = featured.map(createShowcaseCard).join('');
 }
 
-function setFilter(filter) {
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    const isActive = btn.dataset.filter === filter;
-    btn.classList.toggle('active', isActive);
-    btn.setAttribute('aria-selected', isActive);
+function renderCategoryFilters() {
+  const container = document.getElementById('filter-buttons');
+  if (!container) return;
+
+  const categories = loadCategories();
+  container.innerHTML = `
+    <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''} cursor-pointer" data-filter="all" role="tab" aria-selected="${currentFilter === 'all'}">Усі</button>
+    ${categories.map(cat => `
+      <button class="filter-btn ${currentFilter === cat.id ? 'active' : ''} cursor-pointer" data-filter="${cat.id}" role="tab" aria-selected="${currentFilter === cat.id}">${cat.label}</button>
+    `).join('')}
+  `;
+}
+
+function applyCategoryCoverImages() {
+  if (!productsCache) return;
+
+  document.querySelectorAll('.category-card[data-filter]').forEach(card => {
+    const categoryId = card.dataset.filter;
+    const img = card.querySelector('.category-bg-image');
+    if (!img) return;
+
+    const featured = productsCache.find(p => p.category === categoryId && p.image);
+    if (featured) img.src = featured.image;
   });
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  renderCategoryFilters();
   renderProducts(filter);
 }
 
@@ -100,9 +123,10 @@ function handleSearch(query) {
   const q = query.toLowerCase();
   const results = productsCache.filter(p =>
     p.name.toLowerCase().includes(q) ||
+    (p.code && p.code.toLowerCase().includes(q)) ||
     p.description.toLowerCase().includes(q) ||
     (p.fullDescription && p.fullDescription.toLowerCase().includes(q)) ||
-    CATEGORY_LABELS[p.category].toLowerCase().includes(q)
+    getCategoryLabel(p.category).toLowerCase().includes(q)
   );
 
   if (results.length === 0) {
@@ -112,7 +136,7 @@ function handleSearch(query) {
 
   resultsEl.innerHTML = results.map(p => `
     <a href="${getProductUrl(p.id)}" class="search-result-item cursor-pointer">
-      <div class="w-10 h-10 rounded-lg img-${p.category} flex items-center justify-center flex-shrink-0">
+      <div class="w-10 h-10 rounded-lg ${getCategoryImageClass(p.category)} flex items-center justify-center flex-shrink-0">
         <svg class="w-5 h-5 text-patriot-accent/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           ${getProductIcon(p.category)}
         </svg>
@@ -146,11 +170,61 @@ function initHorizontalScroll() {
   const progress = document.getElementById('scroll-progress');
   if (!container || !progress) return;
 
-  container.addEventListener('scroll', () => {
+  const updateProgress = () => {
     const maxScroll = container.scrollWidth - container.clientWidth;
     const percent = maxScroll > 0 ? (container.scrollLeft / maxScroll) * 100 : 0;
     progress.style.width = percent + '%';
+  };
+
+  container.addEventListener('scroll', updateProgress);
+
+  // PC: vertical wheel → horizontal scroll while hovering the track
+  container.addEventListener('wheel', (e) => {
+    if (container.scrollWidth <= container.clientWidth) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    container.scrollLeft += e.deltaY;
+  }, { passive: false });
+
+  // PC: click-and-drag to scroll (ignores small movement so links still work)
+  let isDragging = false;
+  let dragStartX = 0;
+  let scrollStart = 0;
+  let dragMoved = false;
+
+  container.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || container.scrollWidth <= container.clientWidth) return;
+    isDragging = true;
+    dragMoved = false;
+    dragStartX = e.pageX;
+    scrollStart = container.scrollLeft;
   });
+
+  container.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const delta = e.pageX - dragStartX;
+    if (Math.abs(delta) > 4) {
+      dragMoved = true;
+      container.classList.add('is-dragging');
+      e.preventDefault();
+      container.scrollLeft = scrollStart - delta;
+    }
+  });
+
+  const stopDrag = () => {
+    isDragging = false;
+    container.classList.remove('is-dragging');
+  };
+
+  container.addEventListener('mouseup', stopDrag);
+  container.addEventListener('mouseleave', stopDrag);
+
+  container.addEventListener('click', (e) => {
+    if (dragMoved) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 }
 
 function initEventListeners() {
@@ -199,6 +273,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAgeGate();
   loadCart();
   await loadProducts();
+  loadCategories();
+  applyCategoryCoverImages();
+  renderCategoryFilters();
   renderProducts();
   renderShowcase();
   updateCartUI();

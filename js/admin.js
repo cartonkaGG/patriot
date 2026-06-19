@@ -154,7 +154,8 @@ function renderAdminTable(filter = '') {
   const filtered = productsCache.filter(p =>
     !q ||
     p.name.toLowerCase().includes(q) ||
-    CATEGORY_LABELS[p.category].toLowerCase().includes(q)
+    (p.code && p.code.toLowerCase().includes(q)) ||
+    getCategoryLabel(p.category).toLowerCase().includes(q)
   );
 
   tbody.innerHTML = filtered.map(p => `
@@ -162,13 +163,14 @@ function renderAdminTable(filter = '') {
       <td>
         ${p.image
           ? `<img src="${p.image}" alt="" class="admin-table-thumb">`
-          : `<div class="admin-table-thumb admin-table-thumb--empty img-${p.category}"></div>`}
+          : `<div class="admin-table-thumb admin-table-thumb--empty ${getCategoryImageClass(p.category)}"></div>`}
       </td>
       <td>${p.id}</td>
+      <td class="text-xs font-mono text-patriot-muted">${p.code ? escapeHtml(p.code) : '—'}</td>
       <td>
         <a href="${getProductUrl(p.id)}" class="hover:text-patriot-accent transition-colors cursor-pointer font-medium">${p.name}</a>
       </td>
-      <td>${CATEGORY_LABELS[p.category]}</td>
+      <td>${getCategoryLabel(p.category)}</td>
       <td>${formatProductPriceHtml(p, 'text-sm')}</td>
       <td><span class="stock-badge ${isProductInStock(p) ? 'stock-badge--in' : 'stock-badge--out'}">${formatStockLabel(p)}</span></td>
       <td>${p.badge ? (p.badge === 'hit' ? 'Хіт' : 'Новинка') : '—'}</td>
@@ -182,7 +184,80 @@ function renderAdminTable(filter = '') {
   `).join('');
 
   document.getElementById('stat-total').textContent = productsCache.length;
-  document.getElementById('stat-categories').textContent = new Set(productsCache.map(p => p.category)).size;
+  document.getElementById('stat-categories').textContent = loadCategories().length;
+}
+
+function populateProductCategorySelect(selectedId = 'pneumatic') {
+  const select = document.getElementById('product-category-input');
+  if (!select) return;
+  select.innerHTML = renderCategorySelectOptions(selectedId);
+}
+
+function openCategoriesModal() {
+  renderCategoriesList();
+  const modal = document.getElementById('categories-modal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  document.getElementById('new-category-name').focus();
+}
+
+function closeCategoriesModal() {
+  const modal = document.getElementById('categories-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+}
+
+function renderCategoriesList() {
+  const list = document.getElementById('categories-list');
+  if (!list) return;
+
+  list.innerHTML = loadCategories(true).map(cat => {
+    const count = productsCache.filter(p => p.category === cat.id).length;
+    const canDelete = !cat.builtin && count === 0;
+
+    return `
+      <div class="admin-category-item">
+        <div class="min-w-0">
+          <p class="font-medium text-sm">${escapeHtml(cat.label)}</p>
+          <p class="text-xs text-patriot-muted">${cat.builtin ? 'Базова' : 'Власна'} · ${count} товарів</p>
+        </div>
+        ${canDelete
+          ? `<button type="button" class="admin-action-btn admin-action-delete cursor-pointer" data-delete-category="${cat.id}">Видалити</button>`
+          : '<span class="text-xs text-patriot-muted">—</span>'}
+      </div>`;
+  }).join('');
+}
+
+function handleAddCategory(e) {
+  e.preventDefault();
+  const input = document.getElementById('new-category-name');
+  const result = addCategory(input.value);
+  if (result.error) {
+    showToast(result.error);
+    return;
+  }
+
+  input.value = '';
+  populateProductCategorySelect(result.category.id);
+  renderCategoriesList();
+  renderAdminTable(document.getElementById('admin-search').value);
+  document.getElementById('stat-categories').textContent = loadCategories().length;
+  showToast(`Категорію «${result.category.label}» додано`);
+}
+
+function handleDeleteCategory(categoryId) {
+  if (!confirm('Видалити цю категорію?')) return;
+
+  const result = deleteCategory(categoryId);
+  if (result.error) {
+    showToast(result.error);
+    return;
+  }
+
+  populateProductCategorySelect();
+  renderCategoriesList();
+  document.getElementById('stat-categories').textContent = loadCategories().length;
+  showToast('Категорію видалено');
 }
 
 function openModal(product = null) {
@@ -194,7 +269,8 @@ function openModal(product = null) {
 
   document.getElementById('product-id').value = product ? product.id : '';
   document.getElementById('product-name-input').value = product ? product.name : '';
-  document.getElementById('product-category-input').value = product ? product.category : 'pneumatic';
+  document.getElementById('product-code-input').value = product?.code || '';
+  populateProductCategorySelect(product ? product.category : 'pneumatic');
   document.getElementById('product-price-input').value = product ? product.price : '';
   document.getElementById('product-sale-price-input').value = product?.salePrice ?? '';
   document.getElementById('product-stock-input').value = product && product.inStock === false ? 'out_of_stock' : 'in_stock';
@@ -238,6 +314,7 @@ async function saveProductFromFormAsync(e) {
 
   const productData = {
     name: document.getElementById('product-name-input').value.trim(),
+    code: document.getElementById('product-code-input').value.trim() || null,
     category: document.getElementById('product-category-input').value,
     price,
     salePrice: salePrice != null && salePrice > 0 ? salePrice : null,
@@ -286,36 +363,6 @@ async function deleteProduct(id) {
   showToast('Товар видалено');
 }
 
-async function syncCatalogToDb() {
-  if (!getSupabaseAdmin()) {
-    showToast('Потрібен Service Role Key у налаштуваннях');
-    return;
-  }
-  if (!confirm('Завантажити всі товари та фото в Supabase?')) return;
-
-  showToast('Синхронізація з БД...');
-  const { synced, error } = await syncAllProductsToDb(productsCache);
-  if (error) {
-    showToast('Помилка: ' + error);
-    return;
-  }
-
-  productsCache = null;
-  await loadProducts(true);
-  renderAdminTable(document.getElementById('admin-search').value);
-  showToast(`Синхронізовано ${synced} товарів`);
-}
-
-async function resetProducts() {
-  if (!confirm('Скинути каталог до початкового стану з products.json?')) return;
-
-  localStorage.removeItem(STORAGE_PRODUCTS_KEY);
-  productsCache = null;
-  await loadProducts();
-  renderAdminTable();
-  showToast('Каталог скинуто');
-}
-
 function importProducts(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -323,8 +370,7 @@ function importProducts(file) {
       const imported = JSON.parse(e.target.result);
       if (!Array.isArray(imported)) throw new Error('Invalid format');
       saveProducts(imported);
-      if (typeof syncAllProductsToDb === 'function') {
-        showToast('Синхронізація з БД...');
+      if (getSupabaseAdmin() && typeof syncAllProductsToDb === 'function') {
         await syncAllProductsToDb(imported);
       }
       renderAdminTable();
@@ -340,6 +386,14 @@ const ORDER_STATUS_LABELS = Object.fromEntries(
   ORDER_STATUS_OPTIONS.map(o => [o.value, o.label])
 );
 
+const ADMIN_PAYMENT_LABELS = {
+  online: 'Оплатити зараз',
+  on_delivery: 'Оплата при отриманні'
+};
+
+let adminOrdersCache = [];
+let activeOrderId = null;
+
 function formatOrderDate(iso) {
   return new Date(iso).toLocaleString('uk-UA', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -349,27 +403,95 @@ function formatOrderDate(iso) {
 
 function formatDelivery(order) {
   const d = order?.delivery || {};
-  if (d.type === 'pickup') return 'Самовивіз';
+  if (d.type === 'pickup') return `Самовивіз · ${d.address || PICKUP_ADDRESS}`;
   if (d.type === 'nova_poshta') {
     const city = d.city || '—';
     const branch = d.warehouseLabel || '—';
-    return `НП: ${city}, ${branch}`;
+    return `Нова Пошта · ${city}, ${branch}`;
   }
   if (d.type === 'ukrposhta') {
-    return `Укрпошта: ${d.officeLabel || d.city || '—'}`;
+    return `Укрпошта · ${d.officeLabel || d.city || '—'}`;
   }
   return '—';
 }
 
-function renderOrdersTable() {
-  renderOrdersTableAsync();
+function formatDeliveryShort(order) {
+  const d = order?.delivery || {};
+  if (d.type === 'pickup') return 'Самовивіз';
+  if (d.type === 'nova_poshta') return `НП · ${d.city || '—'}`;
+  if (d.type === 'ukrposhta') return 'Укрпошта';
+  return '—';
 }
 
-async function renderOrdersTableAsync() {
-  const tbody = document.getElementById('admin-orders-list');
-  const emptyEl = document.getElementById('orders-empty');
-  const tableWrap = tbody.closest('.glass-card');
+function getOrderItemsCount(order) {
+  return (order.items || []).reduce((sum, i) => sum + (i.qty || 0), 0);
+}
 
+function getOrderItemImage(item) {
+  if (item?.image) return item.image;
+  const product = productsCache?.find(p => p.id === item.id);
+  return product?.image || null;
+}
+
+function renderOrderStatusBadge(status) {
+  const label = ORDER_STATUS_LABELS[status] || status;
+  return `<span class="order-status-badge order-status-badge--${status}">${label}</span>`;
+}
+
+function isOrderDone(status) {
+  return status === 'completed' || status === 'delivered';
+}
+
+function isOrderActive(status) {
+  return !isOrderDone(status) && status !== 'cancelled' && status !== 'new' && status !== 'awaiting_payment';
+}
+
+function populateOrdersStatusFilter() {
+  const select = document.getElementById('orders-status-filter');
+  if (!select || select.options.length > 1) return;
+
+  ORDER_STATUS_OPTIONS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.value;
+    opt.textContent = s.label;
+    select.appendChild(opt);
+  });
+}
+
+function filterAdminOrders(orders) {
+  const query = document.getElementById('orders-search')?.value.trim().toLowerCase() || '';
+  const status = document.getElementById('orders-status-filter')?.value || 'all';
+
+  return orders.filter(o => {
+    if (status !== 'all' && o.status !== status) return false;
+    if (!query) return true;
+
+    const haystack = [
+      String(o.id),
+      o.customer?.name,
+      o.customer?.phone,
+      o.customer?.email,
+      formatDelivery(o)
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return haystack.includes(query);
+  });
+}
+
+function updateOrdersStats(orders) {
+  document.getElementById('stat-orders').textContent = orders.length;
+  document.getElementById('stat-orders-new').textContent = orders.filter(o =>
+    o.status === 'new' || o.status === 'awaiting_payment'
+  ).length;
+  document.getElementById('stat-orders-active').textContent = orders.filter(o =>
+    !isOrderDone(o.status) && o.status !== 'cancelled' && o.status !== 'new' && o.status !== 'awaiting_payment'
+  ).length;
+  document.getElementById('stat-orders-done').textContent = orders.filter(o =>
+    isOrderDone(o.status)
+  ).length;
+}
+
+async function loadAdminOrders() {
   let orders = [];
 
   try {
@@ -383,7 +505,7 @@ async function renderOrdersTableAsync() {
         payment: o.payment,
         total: Number(o.total),
         status: o.status,
-        items: o.items,
+        items: o.items || [],
         comment: o.comment,
         fromDb: true
       }));
@@ -400,64 +522,191 @@ async function renderOrdersTableAsync() {
       delivery: o.delivery,
       payment: o.payment,
       total: o.total,
-      status: o.status,
-      items: o.items,
+      status: o.status || 'new',
+      items: o.items || [],
       comment: o.comment,
       fromDb: Boolean(o.dbId)
     }));
   }
 
-  document.getElementById('stat-orders').textContent = orders.length;
+  orders.sort((a, b) => new Date(b.date) - new Date(a.date));
+  adminOrdersCache = orders;
+  return orders;
+}
+
+function renderOrdersTable() {
+  renderOrdersTableAsync();
+}
+
+async function renderOrdersTableAsync() {
+  const tbody = document.getElementById('admin-orders-list');
+  const emptyEl = document.getElementById('orders-empty');
+  const filterEmptyEl = document.getElementById('orders-filter-empty');
+  const tableWrap = tbody.closest('.glass-card');
+
+  populateOrdersStatusFilter();
+  const orders = await loadAdminOrders();
+  const filtered = filterAdminOrders(orders);
+
+  updateOrdersStats(orders);
 
   if (orders.length === 0) {
     tableWrap.classList.add('hidden');
     emptyEl.classList.remove('hidden');
+    filterEmptyEl.classList.add('hidden');
+    tbody.innerHTML = '';
+    return;
+  }
+
+  emptyEl.classList.add('hidden');
+
+  if (filtered.length === 0) {
+    tableWrap.classList.add('hidden');
+    filterEmptyEl.classList.remove('hidden');
+    tbody.innerHTML = '';
     return;
   }
 
   tableWrap.classList.remove('hidden');
-  emptyEl.classList.add('hidden');
+  filterEmptyEl.classList.add('hidden');
 
-  tbody.innerHTML = orders.map(o => `
-    <tr class="cursor-pointer order-row" data-id="${o.id}">
-      <td class="font-medium">#${o.id}</td>
+  tbody.innerHTML = filtered.map(o => {
+    const itemCount = getOrderItemsCount(o);
+    const thumbs = (o.items || []).slice(0, 3).map(item => {
+      const src = getOrderItemImage(item);
+      return src
+        ? `<img src="${src}" alt="" class="admin-order-thumb">`
+        : `<span class="admin-order-thumb admin-order-thumb--empty ${getCategoryImageClass(item.category || 'accessories')}"></span>`;
+    }).join('');
+
+    return `
+    <tr class="order-row" data-id="${o.id}">
+      <td class="font-medium whitespace-nowrap">#${o.id}</td>
       <td class="text-xs whitespace-nowrap">${formatOrderDate(o.date)}</td>
       <td>
-        <div class="text-sm font-medium">${o.customer.name}</div>
-        <div class="text-xs text-patriot-muted">${o.customer.phone}</div>
+        <div class="text-sm font-medium">${escapeHtml(o.customer?.name || '—')}</div>
+        <div class="text-xs text-patriot-muted">${escapeHtml(o.customer?.phone || '')}</div>
       </td>
-      <td class="text-xs max-w-[200px] truncate" title="${formatDelivery(o)}">${formatDelivery(o)}</td>
-      <td class="text-xs">${o.payment === 'online' ? 'Зараз' : 'При отрим.'}</td>
-      <td class="font-medium whitespace-nowrap">${formatPrice(o.total)}</td>
       <td>
-        <select class="admin-input order-status-select cursor-pointer" data-order-id="${o.id}" data-from-db="${o.fromDb ? '1' : '0'}" aria-label="Статус замовлення">
-          ${ORDER_STATUS_OPTIONS.map(s => `<option value="${s.value}" ${o.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
-        </select>
+        <div class="admin-order-thumb-row">${thumbs}</div>
+        <div class="text-xs text-patriot-muted mt-1">${itemCount} шт.</div>
       </td>
-    </tr>
-  `).join('');
+      <td class="text-xs max-w-[180px]">
+        <div>${escapeHtml(formatDeliveryShort(o))}</div>
+        <div class="text-patriot-muted">${o.payment === 'online' ? 'Оплата зараз' : 'При отрим.'}</div>
+      </td>
+      <td class="font-medium whitespace-nowrap">${formatPrice(o.total)}</td>
+      <td>${renderOrderStatusBadge(o.status)}</td>
+      <td>
+        <button type="button" class="admin-action-btn cursor-pointer order-details-btn" data-id="${o.id}">Деталі</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
-function showOrderDetails(orderId) {
-  const order = loadOrders().find(o => o.id === orderId);
+function getAdminOrderById(orderId) {
+  return adminOrdersCache.find(o => String(o.id) === String(orderId));
+}
+
+function openOrderModal(orderId) {
+  const order = getAdminOrderById(orderId);
   if (!order) {
-    showToast('Деталі замовлення доступні в Supabase Dashboard');
+    showToast('Замовлення не знайдено');
     return;
   }
 
-  const items = order.items.map(i => `• ${i.name} × ${i.qty} — ${formatPrice(i.price * i.qty)}`).join('\n');
-  alert(
-    `Замовлення #${order.id}\n` +
-    `Дата: ${formatOrderDate(order.date)}\n` +
-    `Клієнт: ${order.customer.name}\n` +
-    `Тел: ${order.customer.phone}\n` +
-    `Email: ${order.customer.email || '—'}\n` +
-    `Доставка: ${formatDelivery(order)}\n` +
-    `Оплата: ${order.payment === 'online' ? 'Оплатити зараз' : 'При отриманні'}\n` +
-    `Коментар: ${order.comment || '—'}\n\n` +
-    `Товари:\n${items}\n\n` +
-    `Разом: ${formatPrice(order.total)}`
-  );
+  activeOrderId = order.id;
+  const modal = document.getElementById('order-modal');
+
+  document.getElementById('order-modal-title').textContent = `Замовлення #${order.id}`;
+  document.getElementById('order-modal-date').textContent = formatOrderDate(order.date);
+  document.getElementById('order-modal-timeline').innerHTML = renderOrderTimeline(order.status);
+
+  const customer = order.customer || {};
+  document.getElementById('order-modal-customer').innerHTML = `
+    <p class="font-medium">${escapeHtml(customer.name || '—')}</p>
+    <p class="mt-2"><a href="tel:${(customer.phone || '').replace(/\s/g, '')}" class="text-patriot-accent hover:underline">${escapeHtml(customer.phone || '—')}</a></p>
+    ${customer.email ? `<p class="mt-1"><a href="mailto:${customer.email}" class="text-patriot-accent hover:underline">${escapeHtml(customer.email)}</a></p>` : ''}
+  `;
+
+  document.getElementById('order-modal-delivery').innerHTML = `
+    <p><strong>Доставка:</strong> ${escapeHtml(formatDelivery(order))}</p>
+    <p class="mt-2"><strong>Оплата:</strong> ${escapeHtml(ADMIN_PAYMENT_LABELS[order.payment] || order.payment || '—')}</p>
+  `;
+
+  document.getElementById('order-modal-items').innerHTML = (order.items || []).map(item => {
+    const src = getOrderItemImage(item);
+    const thumb = src
+      ? `<img src="${src}" alt="" class="admin-order-item-thumb">`
+      : `<span class="admin-order-item-thumb admin-order-item-thumb--empty ${getCategoryImageClass(item.category || 'accessories')}"></span>`;
+
+    return `
+      <div class="admin-order-item">
+        ${thumb}
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-sm truncate">${escapeHtml(item.name)}</p>
+          <p class="text-xs text-patriot-muted">${item.qty} × ${formatPrice(item.price)}</p>
+        </div>
+        <span class="font-semibold text-sm whitespace-nowrap">${formatPrice(item.price * item.qty)}</span>
+      </div>`;
+  }).join('') || '<p class="text-sm text-patriot-muted">Немає товарів</p>';
+
+  document.getElementById('order-modal-total').textContent = formatPrice(order.total);
+
+  const commentWrap = document.getElementById('order-modal-comment-wrap');
+  if (order.comment) {
+    commentWrap.classList.remove('hidden');
+    document.getElementById('order-modal-comment').textContent = order.comment;
+  } else {
+    commentWrap.classList.add('hidden');
+  }
+
+  const statusSelect = document.getElementById('order-modal-status');
+  statusSelect.innerHTML = ORDER_STATUS_OPTIONS.map(s =>
+    `<option value="${s.value}" ${order.status === s.value ? 'selected' : ''}>${s.label}</option>`
+  ).join('');
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+function closeOrderModal() {
+  const modal = document.getElementById('order-modal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+  activeOrderId = null;
+}
+
+async function saveOrderModalStatus() {
+  if (!activeOrderId) return;
+
+  const status = document.getElementById('order-modal-status').value;
+  const order = getAdminOrderById(activeOrderId);
+  if (!order) return;
+
+  const result = await updateOrderStatus(activeOrderId, status);
+  if (result.error) {
+    showToast(result.error);
+    return;
+  }
+
+  order.status = status;
+  document.getElementById('order-modal-timeline').innerHTML = renderOrderTimeline(status);
+  await renderOrdersTableAsync();
+  showToast('Статус оновлено');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function showOrderDetails(orderId) {
+  openOrderModal(orderId);
 }
 
 function initTabs() {
@@ -606,8 +855,16 @@ function initAdmin() {
     e.target.value = '';
   });
 
-  document.getElementById('btn-reset').addEventListener('click', resetProducts);
-  document.getElementById('btn-sync-db').addEventListener('click', syncCatalogToDb);
+  document.getElementById('btn-manage-categories').addEventListener('click', openCategoriesModal);
+  document.getElementById('categories-modal-close').addEventListener('click', closeCategoriesModal);
+  document.getElementById('category-form').addEventListener('submit', handleAddCategory);
+  document.getElementById('categories-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'categories-modal') closeCategoriesModal();
+  });
+  document.getElementById('categories-list').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-delete-category]');
+    if (btn) handleDeleteCategory(btn.dataset.deleteCategory);
+  });
 
   document.getElementById('admin-search').addEventListener('input', (e) => {
     renderAdminTable(e.target.value);
@@ -627,31 +884,24 @@ function initAdmin() {
   });
 
   document.getElementById('admin-orders-list').addEventListener('click', (e) => {
-    if (e.target.closest('.order-status-select')) return;
-    const row = e.target.closest('.order-row');
-    if (row) showOrderDetails(parseInt(row.dataset.id, 10));
-  });
-
-  document.getElementById('admin-orders-list').addEventListener('change', async (e) => {
-    const select = e.target.closest('.order-status-select');
-    if (!select) return;
-
-    const orderId = parseInt(select.dataset.orderId, 10);
-    const status = select.value;
-    const fromDb = select.dataset.fromDb === '1';
-
-    const result = await updateOrderStatus(orderId, status);
-    if (result.error) {
-      showToast(result.error);
-      renderOrdersTable();
+    const btn = e.target.closest('.order-details-btn');
+    if (btn) {
+      openOrderModal(parseInt(btn.dataset.id, 10));
       return;
     }
 
-    if (!fromDb) {
-      renderOrdersTable();
-    }
+    const row = e.target.closest('.order-row');
+    if (row) openOrderModal(parseInt(row.dataset.id, 10));
+  });
 
-    showToast('Статус оновлено');
+  document.getElementById('orders-search').addEventListener('input', () => renderOrdersTable());
+  document.getElementById('orders-status-filter').addEventListener('change', () => renderOrdersTable());
+  document.getElementById('orders-refresh').addEventListener('click', () => renderOrdersTableAsync());
+
+  document.getElementById('order-modal-close').addEventListener('click', closeOrderModal);
+  document.getElementById('order-modal-save-status').addEventListener('click', saveOrderModalStatus);
+  document.getElementById('order-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'order-modal') closeOrderModal();
   });
 
   document.getElementById('settings-form').addEventListener('submit', saveSettingsForm);
@@ -675,6 +925,8 @@ function initAdmin() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadProducts();
+  loadCategories();
+  populateProductCategorySelect();
   initAdmin();
 
   if (isAuthenticated()) {

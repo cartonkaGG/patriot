@@ -11,7 +11,7 @@ function setProductMainImage(src) {
     imageEl.className = 'product-detail-image rounded-2xl overflow-hidden aspect-square product-image--photo';
     imageEl.innerHTML = `<img src="${src}" alt="" class="product-photo product-photo--detail" loading="lazy">`;
   } else if (currentProduct) {
-    imageEl.className = `product-detail-image rounded-2xl overflow-hidden aspect-square img-${currentProduct.category} flex items-center justify-center`;
+    imageEl.className = `product-detail-image rounded-2xl overflow-hidden aspect-square ${getCategoryImageClass(currentProduct.category)} flex items-center justify-center`;
     imageEl.innerHTML = `
       <svg class="w-32 h-32 text-patriot-accent/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         ${getProductIcon(currentProduct.category)}
@@ -134,9 +134,21 @@ function renderProduct(product) {
   }
   badgeEl.innerHTML = badges.join(' ');
 
-  document.getElementById('product-category').textContent = CATEGORY_LABELS[product.category];
-  document.getElementById('breadcrumb-category').textContent = CATEGORY_LABELS[product.category];
+  document.getElementById('product-category').textContent = getCategoryLabel(product.category);
+  document.getElementById('breadcrumb-category').textContent = getCategoryLabel(product.category);
   document.getElementById('breadcrumb-category').href = 'index.html#catalog';
+
+  const codeEl = document.getElementById('product-code');
+  if (codeEl) {
+    if (hasProductCode(product)) {
+      codeEl.textContent = `Код: ${product.code}`;
+      codeEl.classList.remove('hidden');
+    } else {
+      codeEl.textContent = '';
+      codeEl.classList.add('hidden');
+    }
+  }
+
   document.getElementById('breadcrumb-name').textContent = product.name;
   document.getElementById('product-name').textContent = product.name;
   document.getElementById('product-price').innerHTML = formatProductPriceHtml(product, 'text-3xl');

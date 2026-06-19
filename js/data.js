@@ -4,16 +4,23 @@ const STORAGE_PRODUCTS_KEY = 'patriot-products';
 const STORAGE_CART_KEY = 'patriot-cart';
 const STORAGE_ORDERS_KEY = 'patriot-orders';
 const STORAGE_SETTINGS_KEY = 'patriot-settings';
+const STORAGE_CATEGORIES_KEY = 'patriot-categories';
 
 const PICKUP_ADDRESS = 'м. Луцьк, проспект Волі, 1, ЦУМ 5 поверх';
 
-const CATEGORY_LABELS = {
-  pneumatic: 'Пневматика',
-  statues: 'Статуетки',
-  zippo: 'Zippo',
-  defense: 'Самооборона',
-  accessories: 'Аксесуари'
-};
+const DEFAULT_CATEGORIES = [
+  { id: 'pneumatic', label: 'Пневматика', builtin: true },
+  { id: 'statues', label: 'Статуетки', builtin: true },
+  { id: 'zippo', label: 'Zippo', builtin: true },
+  { id: 'defense', label: 'Самооборона', builtin: true },
+  { id: 'accessories', label: 'Аксесуари', builtin: true }
+];
+
+const BUILTIN_CATEGORY_IDS = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+
+const CATEGORY_LABELS = Object.fromEntries(DEFAULT_CATEGORIES.map(c => [c.id, c.label]));
+
+let categoriesCache = null;
 
 const CATEGORY_ICONS = {
   pneumatic: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>',
@@ -22,6 +29,121 @@ const CATEGORY_ICONS = {
   defense: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>',
   accessories: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"/>'
 };
+
+function invalidateCategoriesCache() {
+  categoriesCache = null;
+}
+
+function getCustomCategories() {
+  try {
+    const stored = localStorage.getItem(STORAGE_CATEGORIES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCategories(categories) {
+  localStorage.setItem(STORAGE_CATEGORIES_KEY, JSON.stringify(categories));
+  invalidateCategoriesCache();
+}
+
+function loadCategories(forceReload = false) {
+  if (categoriesCache && !forceReload) return categoriesCache;
+
+  const custom = getCustomCategories();
+  const merged = [...DEFAULT_CATEGORIES];
+  const ids = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+
+  custom.forEach(c => {
+    if (c?.id && c?.label && !ids.has(c.id)) {
+      merged.push({ id: c.id, label: c.label, builtin: false });
+      ids.add(c.id);
+    }
+  });
+
+  if (productsCache) {
+    productsCache.forEach(p => {
+      if (p.category && !ids.has(p.category)) {
+        merged.push({ id: p.category, label: p.category, builtin: false, auto: true });
+        ids.add(p.category);
+      }
+    });
+  }
+
+  categoriesCache = merged;
+  return categoriesCache;
+}
+
+function getCategoryLabel(categoryId) {
+  const cat = loadCategories().find(c => c.id === categoryId);
+  return cat?.label || categoryId || '—';
+}
+
+function getCategoryImageClass(category) {
+  return BUILTIN_CATEGORY_IDS.has(category) ? `img-${category}` : 'img-custom';
+}
+
+function transliterateSlug(name) {
+  const map = {
+    а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ye', ж: 'zh', з: 'z',
+    и: 'y', і: 'i', ї: 'yi', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p',
+    р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh',
+    щ: 'shch', ь: '', ю: 'yu', я: 'ya', ы: 'y', э: 'e', ё: 'yo', ъ: ''
+  };
+  return name.toLowerCase().split('').map(ch => map[ch] ?? ch).join('');
+}
+
+function slugifyCategory(name) {
+  let slug = transliterateSlug(name.trim())
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!slug) slug = 'category';
+
+  const existing = new Set(loadCategories(true).map(c => c.id));
+  if (!existing.has(slug)) return slug;
+
+  let i = 2;
+  while (existing.has(`${slug}-${i}`)) i++;
+  return `${slug}-${i}`;
+}
+
+function addCategory(label) {
+  const trimmed = label.trim();
+  if (!trimmed) return { error: 'Вкажіть назву категорії' };
+
+  if (loadCategories().some(c => c.label.toLowerCase() === trimmed.toLowerCase())) {
+    return { error: 'Така категорія вже існує' };
+  }
+
+  const id = slugifyCategory(trimmed);
+  const custom = getCustomCategories();
+  custom.push({ id, label: trimmed });
+  saveCustomCategories(custom);
+  return { error: null, category: { id, label: trimmed, builtin: false } };
+}
+
+function deleteCategory(categoryId) {
+  if (BUILTIN_CATEGORY_IDS.has(categoryId)) {
+    return { error: 'Базову категорію не можна видалити' };
+  }
+  if (productsCache?.some(p => p.category === categoryId)) {
+    return { error: 'У цій категорії є товари. Спочатку перенесіть їх.' };
+  }
+
+  saveCustomCategories(getCustomCategories().filter(c => c.id !== categoryId));
+  return { error: null };
+}
+
+function renderCategorySelectOptions(selectedId = '') {
+  return loadCategories().map(c =>
+    `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.label}</option>`
+  ).join('');
+}
+
+function hasProductCode(product) {
+  return Boolean(product?.code?.trim());
+}
 
 const STORE_CONTACTS = {
   phone: '+380997577214',
@@ -138,7 +260,7 @@ function renderCartItemThumb(item, extraClass = '') {
   }
 
   return `
-    <a href="${getProductUrl(item.id)}" class="${imageClass} img-${item.category} cursor-pointer flex-shrink-0">
+    <a href="${getProductUrl(item.id)}" class="${imageClass} ${getCategoryImageClass(item.category)} cursor-pointer flex-shrink-0">
       <svg class="w-6 h-6 text-patriot-accent/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         ${getProductIcon(item.category)}
       </svg>
@@ -177,7 +299,7 @@ function renderProductVisual(product, options = {}) {
   }
 
   return `
-    <div class="${className} img-${product.category}">
+    <div class="${className} ${getCategoryImageClass(product.category)}">
       ${badgeHtml}
       <svg class="${iconClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         ${getProductIcon(product.category)}
@@ -200,6 +322,7 @@ async function loadProducts(forceReload = false) {
     const dbProducts = await fetchProductsFromDb();
     if (dbProducts && dbProducts.length > 0) {
       productsCache = dbProducts;
+      invalidateCategoriesCache();
       localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(productsCache));
       return productsCache;
     }
@@ -209,6 +332,7 @@ async function loadProducts(forceReload = false) {
   if (stored) {
     try {
       productsCache = JSON.parse(stored);
+      invalidateCategoriesCache();
       return productsCache;
     } catch {
       localStorage.removeItem(STORAGE_PRODUCTS_KEY);
@@ -219,6 +343,7 @@ async function loadProducts(forceReload = false) {
     const res = await fetch('data/products.json');
     if (res.ok) {
       productsCache = await res.json();
+      invalidateCategoriesCache();
       return productsCache;
     }
   } catch {
@@ -226,12 +351,14 @@ async function loadProducts(forceReload = false) {
   }
 
   productsCache = [];
+  invalidateCategoriesCache();
   return productsCache;
 }
 
 function saveProducts(products) {
   productsCache = products;
   localStorage.setItem(STORAGE_PRODUCTS_KEY, JSON.stringify(products));
+  invalidateCategoriesCache();
 }
 
 async function persistProduct(product) {

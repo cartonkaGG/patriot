@@ -88,8 +88,7 @@
             Імпорт JSON
             <input type="file" id="btn-import" accept=".json" class="hidden">
           </label>
-          <button id="btn-reset" class="btn-secondary cursor-pointer text-sm">Скинути</button>
-          <button id="btn-sync-db" class="btn-secondary cursor-pointer text-sm">Синхронізувати з БД</button>
+          <button id="btn-manage-categories" class="btn-secondary cursor-pointer text-sm">Категорії</button>
         </div>
         <div class="admin-stats grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div class="glass-card p-4 text-center">
@@ -111,6 +110,7 @@
                 <tr>
                   <th>Фото</th>
                   <th>ID</th>
+                  <th>Код</th>
                   <th>Назва</th>
                   <th>Категорія</th>
                   <th>Ціна</th>
@@ -127,24 +127,46 @@
 
       <!-- Orders Tab -->
       <div id="tab-orders" class="admin-tab-content hidden">
-        <div class="admin-stats grid grid-cols-2 gap-4 mb-8">
+        <div class="admin-stats grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           <div class="glass-card p-4 text-center">
             <div id="stat-orders" class="font-heading text-3xl font-bold">0</div>
             <div class="text-xs text-patriot-muted uppercase tracking-wider">Замовлень</div>
           </div>
+          <div class="glass-card p-4 text-center">
+            <div id="stat-orders-new" class="font-heading text-3xl font-bold text-patriot-accent">0</div>
+            <div class="text-xs text-patriot-muted uppercase tracking-wider">Нові</div>
+          </div>
+          <div class="glass-card p-4 text-center">
+            <div id="stat-orders-active" class="font-heading text-3xl font-bold">0</div>
+            <div class="text-xs text-patriot-muted uppercase tracking-wider">В роботі</div>
+          </div>
+          <div class="glass-card p-4 text-center">
+            <div id="stat-orders-done" class="font-heading text-3xl font-bold text-green-700">0</div>
+            <div class="text-xs text-patriot-muted uppercase tracking-wider">Завершені</div>
+          </div>
         </div>
+
+        <div class="flex flex-wrap gap-3 mb-4">
+          <input type="search" id="orders-search" placeholder="Пошук: №, ім'я, телефон, email..." class="admin-input flex-1 min-w-[220px] max-w-lg">
+          <select id="orders-status-filter" class="admin-input w-auto min-w-[180px] cursor-pointer">
+            <option value="all">Усі статуси</option>
+          </select>
+          <button type="button" id="orders-refresh" class="btn-secondary text-sm cursor-pointer whitespace-nowrap">↻ Оновити</button>
+        </div>
+
         <div class="glass-card overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="admin-table w-full">
+            <table class="admin-table w-full admin-table--orders">
               <thead>
                 <tr>
                   <th>№</th>
                   <th>Дата</th>
                   <th>Клієнт</th>
+                  <th>Товари</th>
                   <th>Доставка</th>
-                  <th>Оплата</th>
                   <th>Сума</th>
                   <th>Статус</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="admin-orders-list"></tbody>
@@ -152,6 +174,7 @@
           </div>
         </div>
         <p id="orders-empty" class="hidden text-center text-patriot-muted py-12">Замовлень ще немає</p>
+        <p id="orders-filter-empty" class="hidden text-center text-patriot-muted py-12">За вашим запитом нічого не знайдено</p>
       </div>
 
       <!-- Settings Tab -->
@@ -272,7 +295,7 @@
             <li><strong class="text-patriot-text">2.</strong> SQL Editor → <code class="bg-patriot-surface px-1 rounded">data/supabase-setup.sql</code> → Run</li>
             <li><strong class="text-patriot-text">3.</strong> Settings → API → URL + anon key + service role key</li>
             <li><strong class="text-patriot-text">4.</strong> Налаштуйте авторизацію (блок вище)</li>
-            <li><strong class="text-patriot-text">5.</strong> Товари та фото зберігаються в таблиці <code class="bg-patriot-surface px-1 rounded">products</code> і Storage <code class="bg-patriot-surface px-1 rounded">product-images</code></li>
+            <li><strong class="text-patriot-text">5.</strong> Товари та фото автоматично зберігаються в <code class="bg-patriot-surface px-1 rounded">products</code> і Storage <code class="bg-patriot-surface px-1 rounded">product-images</code> при збереженні в адмінці</li>
           </ol>
         </div>
       </div>
@@ -296,14 +319,12 @@
             <input type="text" id="product-name-input" required class="admin-input">
           </div>
           <div>
+            <label for="product-code-input" class="admin-label">Код товару</label>
+            <input type="text" id="product-code-input" class="admin-input" placeholder="Напр. PN-001">
+          </div>
+          <div>
             <label for="product-category-input" class="admin-label">Категорія *</label>
-            <select id="product-category-input" required class="admin-input">
-              <option value="pneumatic">Пневматика</option>
-              <option value="statues">Статуетки</option>
-              <option value="zippo">Zippo</option>
-              <option value="defense">Самооборона</option>
-              <option value="accessories">Аксесуари</option>
-            </select>
+            <select id="product-category-input" required class="admin-input cursor-pointer"></select>
           </div>
           <div>
             <label for="product-price-input" class="admin-label">Звичайна ціна (₴) *</label>
@@ -371,6 +392,75 @@
           <button type="button" id="modal-cancel" class="btn-secondary flex-1 cursor-pointer">Скасувати</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Categories Modal -->
+  <div id="categories-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-patriot-primary/60 backdrop-blur-sm">
+    <div class="glass-card max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="font-heading text-2xl font-semibold">Категорії</h2>
+        <button type="button" id="categories-modal-close" class="icon-btn cursor-pointer" aria-label="Закрити">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="category-form" class="flex gap-2 mb-6">
+        <input type="text" id="new-category-name" class="admin-input flex-1" placeholder="Назва нової категорії" required>
+        <button type="submit" class="btn-primary cursor-pointer whitespace-nowrap">Додати</button>
+      </form>
+
+      <div id="categories-list" class="admin-categories-list"></div>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div id="order-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-patriot-primary/60 backdrop-blur-sm">
+    <div class="glass-card admin-order-modal w-full max-w-3xl max-h-[92vh] overflow-y-auto p-6 sm:p-8">
+      <div class="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 id="order-modal-title" class="font-heading text-2xl font-semibold">Замовлення</h2>
+          <p id="order-modal-date" class="text-sm text-patriot-muted mt-1"></p>
+        </div>
+        <button type="button" id="order-modal-close" class="icon-btn cursor-pointer flex-shrink-0" aria-label="Закрити">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div id="order-modal-timeline" class="mb-6"></div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mb-6">
+        <div class="admin-order-block">
+          <h3 class="admin-order-block-title">Клієнт</h3>
+          <div id="order-modal-customer" class="admin-order-block-body text-sm"></div>
+        </div>
+        <div class="admin-order-block">
+          <h3 class="admin-order-block-title">Доставка та оплата</h3>
+          <div id="order-modal-delivery" class="admin-order-block-body text-sm"></div>
+        </div>
+      </div>
+
+      <div class="admin-order-block mb-6">
+        <h3 class="admin-order-block-title">Товари</h3>
+        <div id="order-modal-items" class="admin-order-items"></div>
+        <div class="admin-order-total-row">
+          <span>Разом</span>
+          <span id="order-modal-total" class="font-heading text-xl font-bold"></span>
+        </div>
+      </div>
+
+      <div id="order-modal-comment-wrap" class="admin-order-block mb-6 hidden">
+        <h3 class="admin-order-block-title">Коментар</h3>
+        <p id="order-modal-comment" class="admin-order-block-body text-sm text-patriot-muted"></p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 pt-2 border-t border-stone-200">
+        <label class="flex-1">
+          <span class="admin-label">Змінити статус</span>
+          <select id="order-modal-status" class="admin-input cursor-pointer w-full"></select>
+        </label>
+        <button type="button" id="order-modal-save-status" class="btn-primary cursor-pointer sm:self-end sm:mt-6">Зберегти статус</button>
+      </div>
     </div>
   </div>
 
